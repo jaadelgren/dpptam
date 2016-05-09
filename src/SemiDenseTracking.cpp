@@ -315,11 +315,6 @@ void semidense_tracking(Imagenes *images,SemiDenseMapping *semidense_mapper,\
              if (semidense_mapper->do_initialization_tracking > 0.5 )
              {
 
-                 cv::Mat R_kf = images->Im[0]->R.clone();
-                 cv::Mat t_kf = images->Im[0]->t.clone();
-                 R_kf.convertTo(R_kf,CV_64FC1);
-                 t_kf.convertTo(t_kf,CV_64FC1);
-
                  for (int i = 0;i<images->getNumberOfImages() ; i++)
                  {
                     delete images->Im[i];
@@ -355,13 +350,16 @@ void semidense_tracking(Imagenes *images,SemiDenseMapping *semidense_mapper,\
                   semidense_tracker->points_map_inImage[j] = semidense_tracker->points_map[j].clone();
                 }
 
-                // tracked points: some 3D points may be unaccurate
-                semidense_mapper->points_last_keyframe = \
-                        semidense_tracker->points_map[semidense_tracker->pyramid_levels-1].clone();
-
-                // mapped points: accure 3D points
                 if (semidense_mapper->local_map_points.rows > 100)
-                {semidense_mapper->points_last_keyframe = semidense_mapper->local_map_points.clone();}
+                {
+                	// mapped points: accure 3D points
+                	semidense_mapper->points_last_keyframe = semidense_mapper->local_map_points.clone();
+                }
+                else
+                {
+                	// tracked points: some 3D points may be inaccurate
+                	semidense_mapper->points_last_keyframe = semidense_tracker->points_map[semidense_tracker->pyramid_levels-1].clone();
+                }
 
                 semidense_tracker->processed_frames_since_keyframe = 0;
                 semidense_mapper->do_initialization_tracking = 0;
@@ -598,10 +596,6 @@ void initialization(cv::Mat &R,cv::Mat &t,cv::Mat &R1,cv::Mat &t1,cv::Mat &image
    cv::Mat points_i_print(0,6, CV_32FC1);
    cv::Mat point_i(1,6, CV_32FC1);
 
-   int red_im = reduction;
-   cv::Mat image_red = image_rgb.clone();
-
-
    double f_x = fx;
    double f_y = fy;
    double c_x = cx;
@@ -611,19 +605,15 @@ void initialization(cv::Mat &R,cv::Mat &t,cv::Mat &R1,cv::Mat &t1,cv::Mat &image
 
    cv::Mat points = points_aux.clone();
 
-   double depth_aux = depth;
-
-
-   for (int j = 0; j < image_red.rows-0; j = j+1)
+   for (int j = 0; j < image_p.rows-0; j = j+1)
    {
-   for (int i = 0; i < image_red.cols-0; i = i+1)
+   for (int i = 0; i < image_p.cols-0; i = i+1)
    {
 
 
            point_i.at<float>(0,1) =  -((c_y-j)/f_y)/(-depth);
            point_i.at<float>(0,0) =  -((i-c_x)/f_x)/(-depth);
            point_i.at<float>(0,2) =  1 / (-depth);
-           //point_i.at<float>(0,2) =  point_i.at<float>(0,2) - 0.05*point_i.at<float>(0,2)  + 0.1*point_i.at<float>(0,2) * ((rand() % 1000000 ) / 1000000.0);
            point_i.at<float>(0,3) =  image_gray.at<double>(j,i);
            point_i.at<float>(0,4) =  image_gray.at<double>(j,i);
            point_i.at<float>(0,5) =  image_gray.at<double>(j,i);
