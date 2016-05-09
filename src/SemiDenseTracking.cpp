@@ -572,7 +572,7 @@ void initialization_sd(SemiDenseTracking *semidense_tracker,cv::Mat &R,cv::Mat &
 
    for (int j=0; j<pyramid_levels ; j++)
    {
-         cv::resize(image_p,image_keyframe_pyramid[j],cv::Size(image_p.cols/(reduction_pyramid[j]/reduction),image_p.rows/(reduction_pyramid[j]/reduction)),0,0,cv::INTER_LINEAR);
+         cv::resize(image_p,image_keyframe_pyramid[j],cv::Size(image_p.cols/(reduction_pyramid[j]),image_p.rows/(reduction_pyramid[j])),0,0,cv::INTER_LINEAR);
          get_color(semidense_tracker->points_map[j],semidense_tracker->color[j]);
          semidense_tracker->points3D[j] = semidense_tracker->points_map[j].colRange(0,3).t();
          semidense_tracker->error_vector[j] = cv::Mat::zeros(semidense_tracker->points_map[j].rows,1,CV_64FC1);
@@ -644,27 +644,27 @@ void initialization(cv::Mat &R,cv::Mat &t,cv::Mat &R1,cv::Mat &t1,cv::Mat &image
    image_p.convertTo(image_p, CV_64FC1);
    image_p /= (255*1.0);
 
-   int reduction_ = pow(2,pyramid_levels);
+   int reduction_ = pow(2,pyramid_levels-1);
 
    for (int j=0; j<pyramid_levels ; j++)
    {
          reduction_pyramid[j] = reduction_;
          reduction_/=2;
-         cv::resize(image_p,image_keyframe_pyramid[j],cv::Size(image_p.cols/(reduction_pyramid[j]/reduction),image_p.rows/(reduction_pyramid[j]/reduction)),0,0,cv::INTER_LINEAR);
+         cv::resize(image_p,image_keyframe_pyramid[j],cv::Size(image_p.cols/(reduction_pyramid[j]),image_p.rows/(reduction_pyramid[j])),0,0,cv::INTER_LINEAR);
 
          cv::Mat image_p1 = image_p.clone();
-         resize_points(points_map[j],points,reduction_pyramid[j]/reduction,image_p1,kinect_initialization,limit_grad);
+         resize_points(points_map[j],points,reduction_pyramid[j],image_p1,kinect_initialization,limit_grad);
 
          get_color(points_map[j],color[j]);
          points3D[j] = points_map[j].colRange(0,3).t();
          error_vector[j] = cv::Mat::zeros(points_map[j].rows,1,CV_64FC1);
          weight[j] = cv::Mat::zeros(points_map[j].rows,1,CV_64FC1) + 1;
          jacobian[j] = cv::Mat::zeros(points_map[j].rows,6,CV_64FC1);
-         focalx[j] = fx/(reduction_pyramid[j]/reduction);
-         focaly[j] = fy/(reduction_pyramid[j]/reduction);
+         focalx[j] = fx/(reduction_pyramid[j]);
+         focaly[j] = fy/(reduction_pyramid[j]);
 
-         centerx[j] = cx/(reduction_pyramid[j]/reduction);
-         centery[j] = cy/(reduction_pyramid[j]/reduction);
+         centerx[j] = cx/(reduction_pyramid[j]);
+         centery[j] = cy/(reduction_pyramid[j]);
    }
 }
 
@@ -892,7 +892,7 @@ void optimize_camera(int num_keyframes,SemiDenseTracking *semidense_tracker,Semi
 {
     for (int j = 0 ; j < pyramid_levels; j++)
     {
-      cv::resize(image_to_track,image_reduced[j],cv::Size(image_to_track.cols/(reduction_pyramid[j]/reduction),image_to_track.rows/(reduction_pyramid[j]/reduction)),0,0,cv::INTER_LINEAR);
+      cv::resize(image_to_track,image_reduced[j],cv::Size(image_to_track.cols/(reduction_pyramid[j]),image_to_track.rows/(reduction_pyramid[j])),0,0,cv::INTER_LINEAR);
     }
 
 
@@ -1082,8 +1082,8 @@ void optimize_camera(int num_keyframes,SemiDenseTracking *semidense_tracker,Semi
 
         cv::Mat image_gray1 = image_gray.clone();
         cv::Mat image_rgb1 = image_rgb.clone();
-        cv::resize(image_gray,image_gray1,cv::Size(image_gray.cols/(reduction_pyramid[pyramid_levels-1]/reduction),image_gray.rows/(reduction_pyramid[pyramid_levels-1]/reduction)),0,0,cv::INTER_LINEAR);
-        cv::resize(image_rgb,image_rgb1,cv::Size(image_rgb.cols/(reduction_pyramid[pyramid_levels-1]/reduction),image_rgb.rows/(reduction_pyramid[pyramid_levels-1]/reduction)),0,0,cv::INTER_LINEAR);
+        cv::resize(image_gray,image_gray1,cv::Size(image_gray.cols/(reduction_pyramid[pyramid_levels-1]),image_gray.rows/(reduction_pyramid[pyramid_levels-1])),0,0,cv::INTER_LINEAR);
+        cv::resize(image_rgb,image_rgb1,cv::Size(image_rgb.cols/(reduction_pyramid[pyramid_levels-1]),image_rgb.rows/(reduction_pyramid[pyramid_levels-1])),0,0,cv::INTER_LINEAR);
 
         images.Im[cont_images]->image_gray = image_gray1.clone();
         images.Im[cont_images]->image = image_rgb1.clone();
