@@ -1116,7 +1116,9 @@ void show_error1( cv::Mat points3D_cam, cv::Mat image,  cv::Mat image_print, int
 
            if (k<num_pixels_sd2project )
            {
-               image_print.at<cv::Vec3b>(yy,xx)[2] = round(190.0*weight.at<double>(k,0));
+               image_print.at<cv::Vec3b>(yy,xx)[2] = round(255-255*weight.at<double>(k,0));      //R
+        	   image_print.at<cv::Vec3b>(yy,xx)[0] = round(255-255*weight.at<double>(k,0));      //B
+        	   image_print.at<cv::Vec3b>(yy,xx)[1] = round(255*weight.at<double>(k,0));          //G
            }
            else
            {image_print.at<cv::Vec3b>(yy,xx)[0] = 255;}
