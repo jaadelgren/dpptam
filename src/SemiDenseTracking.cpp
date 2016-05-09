@@ -1257,13 +1257,6 @@ void resize_points(cv::Mat  &points2,cv::Mat  &points, double reduction,cv::Mat 
     float alpha = 10;
     cv::exp(-G*alpha,G);
 
-    cv::Mat sorted_gradients ;
-    G.reshape(0,G.rows*G.cols).copyTo(sorted_gradients);
-
-
-    cv::sort(sorted_gradients,sorted_gradients,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
-
-
     float limit = limit_grad;
 
     cv::Mat B;
@@ -1684,7 +1677,7 @@ double error_f1 = 10;
 double error_f2 = 0;
 cv::Mat R=R2.clone();
 cv::Mat t=t2.clone();
-while (fabs((error_f1 - error_f2)/error_f1) > tracking_th  &&  has_decreased > 0.5 && error_f1 > error_f2 && iter < iter_th )
+while ((error_f1 - error_f2)/error_f1 > tracking_th  &&  has_decreased > 0.5 && iter < iter_th )
 {
 
         iter ++;
@@ -1998,16 +1991,11 @@ void join_maps(vector<cv::Mat> &points_map,cv::Mat R,cv::Mat t,vector<cv::Mat> p
                 vector<double> &focalx, vector<double> &focaly, vector<double> &centerx, vector<double> &centery,   \
               vector<cv::Mat> &image_keyframe_pyramid, float  &points_projected_in_image)
 {
-
     vector<cv::Mat> color(pyramid_levels);
     for (int i = 0; i < pyramid_levels;i++)
     {
-
-
         int imsize_y = image_keyframe_pyramid[i].rows;
         int imsize_x = image_keyframe_pyramid[i].cols;
-
-        float cont2 =0;
 
         float maximum_points_to_track = 0;
 
@@ -2020,10 +2008,6 @@ void join_maps(vector<cv::Mat> &points_map,cv::Mat R,cv::Mat t,vector<cv::Mat> p
         if (i==pyramid_levels-3){
             maximum_points_to_track = 2500;
         }
-
-
-        maximum_points_to_track *=1;
-
 
         cv::Mat points_joined(0,7,CV_64FC1);
         cv::Mat points_joined_previous_map(0,7,CV_64FC1);
@@ -2050,7 +2034,6 @@ void join_maps(vector<cv::Mat> &points_map,cv::Mat R,cv::Mat t,vector<cv::Mat> p
         get_color(point_clouds[i],color[i]);
 
 
-
         cv::Mat error_vector(point_clouds[i].rows,1,CV_64FC1);
         cv::Mat error_vector_sqrt(point_clouds[i].rows,1,CV_64FC1);
         cv::Mat error_check(0,1,CV_64FC1);
@@ -2058,75 +2041,45 @@ void join_maps(vector<cv::Mat> &points_map,cv::Mat R,cv::Mat t,vector<cv::Mat> p
 
         double variance=0.03;
 
-        double min, max;
-        cv::minMaxLoc(pointsClouds3Dmap_cam, &min, &max);
-
         compute_error( pointsClouds3Dmap_cam,image_keyframe_pyramid[i], color[i],error_vector,variance,error_vector_sqrt,error_check,weight);
 
 
-        cont2 = 0;
-        float border = 40 / (4/(pow(2,i)));
 
-
-        border = 0 / (4/(pow(2,i)));
-
-        border = -1;
-
-
-
+        float cont2 = 0;
+        float border = -1;
         cv::Mat check_repatead_points = cv::Mat::zeros(imsize_y,imsize_x,CV_64FC1);
 
         for(int k = 0; k < pointsClouds3Dmap_cam.cols;k++)
         {
-            if (fabs(error_vector.at<double>(k,0))< 0.06 && pointsClouds3Dmap_cam.at<double>(1,k) > 0-border && pointsClouds3Dmap_cam.at<double>(1,k) < imsize_y+border && \
-                    pointsClouds3Dmap_cam.at<double>(0,k) > 0-border &&pointsClouds3Dmap_cam.at<double>(0,k) < imsize_x+border)
-            {
-                if(check_repatead_points.at<double>(round(pointsClouds3Dmap_cam.at<double>(1,k)),
-                                                    round(pointsClouds3Dmap_cam.at<double>(0,k))) < 1)
-                {
-                    cont2++;
-                    check_repatead_points.at<double>(round(pointsClouds3Dmap_cam.at<double>(1,k)),round(pointsClouds3Dmap_cam.at<double>(0,k))) += 1;
-                }
-            }
-        }
-
-        cv::minMaxLoc(pointsClouds3Dmap_cam, &min, &max);
-
-
-
-        float limit = (maximum_points_to_track) / ( cont2);
-        cont2 = 0;
-
-        check_repatead_points = cv::Mat::zeros(imsize_y,imsize_x,CV_64FC1);
-
-        for(int k = 0; k < pointsClouds3Dmap_cam.cols;k++)
-        {
-            if (fabs(error_vector.at<double>(k,0))< 0.06  && pointsClouds3Dmap_cam.at<double>(1,k) > 0-border && pointsClouds3Dmap_cam.at<double>(1,k) < imsize_y+border && \
-                    pointsClouds3Dmap_cam.at<double>(0,k) > 0-border &&pointsClouds3Dmap_cam.at<double>(0,k) < imsize_x+border)
+            if (fabs(error_vector.at<double>(k,0))< 0.06  \
+            		&& pointsClouds3Dmap_cam.at<double>(1,k) > 0-border \
+					&& pointsClouds3Dmap_cam.at<double>(1,k) < imsize_y+border \
+					&& pointsClouds3Dmap_cam.at<double>(0,k) > 0-border \
+					&& pointsClouds3Dmap_cam.at<double>(0,k) < imsize_x+border)
             {
 
                 if(check_repatead_points.at<double>(round(pointsClouds3Dmap_cam.at<double>(1,k)),
                                                     round(pointsClouds3Dmap_cam.at<double>(0,k))) < 1)
                 {
+					cont2++;
 
-                        points_joined_previous_map.push_back(point_clouds[i].row(k));
-                        check_repatead_points.at<double>(round(pointsClouds3Dmap_cam.at<double>(1,k)),round(pointsClouds3Dmap_cam.at<double>(0,k)))+=1;
+					check_repatead_points.at<double>(round(pointsClouds3Dmap_cam.at<double>(1,k)),
+                        							 round(pointsClouds3Dmap_cam.at<double>(0,k))) += 1;
 
+					points_joined_previous_map.push_back(point_clouds[i].row(k));
 
-                        cont2++;
-                        if (pointsClouds3Dmap_cam.at<double>(1,k) > 0-border && pointsClouds3Dmap_cam.at<double>(1,k) < imsize_y+border && \
-                                pointsClouds3Dmap_cam.at<double>(0,k) > 0-border &&pointsClouds3Dmap_cam.at<double>(0,k) < imsize_x+border \
-                                && i==pyramid_levels-1)
-                        {
-                            points_projected_in_image++;
-                        }
-
-
+					if (i==pyramid_levels-1)
+					{
+						points_projected_in_image++;
+					}
                 }
             }
         }
-        limit = (maximum_points_to_track) / ( cont2);
+
+        float limit = (maximum_points_to_track) / (cont2);
+
         cv::Mat points_joined_previous_map_aux(0,7,CV_64FC1);
+
         for(int k = 0; k < points_joined_previous_map.rows;k++)
         {
              if  (((rand() % 1000000 ) / 1000000.0) < limit)
@@ -2136,8 +2089,9 @@ void join_maps(vector<cv::Mat> &points_map,cv::Mat R,cv::Mat t,vector<cv::Mat> p
         }
         points_joined_previous_map = points_joined_previous_map_aux.clone();
 
-
-        points_joined.push_back(points_joined_previous_map); points_map[i] = points_joined.clone();
+        // Update points_map:
+        points_joined.push_back(points_joined_previous_map);
+        points_map[i] = points_joined.clone();
 
     }
 }
