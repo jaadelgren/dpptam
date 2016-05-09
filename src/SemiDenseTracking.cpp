@@ -1385,16 +1385,12 @@ void compute_error_ic( cv::Mat &points3D_cam,cv::Mat &points3D_cam_p, cv::Mat &i
     int imsize_x =image.cols-1;
     int imsize_y =image.rows-1;
 
-    //error = 0;
-    //float cont_errors = 0;
-
     for (int k = 0; k < points3D_cam.cols;k++)
     {
 
         if (points3D_cam.at<double>(1,k) > 0 && points3D_cam.at<double>(1,k) < imsize_y && points3D_cam.at<double>(0,k) > 0 && points3D_cam.at<double>(0,k) < imsize_x
             && points3D_cam_p.at<double>(1,k) > 0 && points3D_cam_p.at<double>(1,k) < imsize_y && points3D_cam_p.at<double>(0,k) > 0 && points3D_cam_p.at<double>(0,k) < imsize_x)
          {
-           //cont++;
             //BILINEAR INTERPOLATION
            double x_2 = points3D_cam.at<double>(0,k);
            double x_1 = static_cast<int>(x_2);
@@ -1441,12 +1437,11 @@ void compute_error_ic( cv::Mat &points3D_cam,cv::Mat &points3D_cam_p, cv::Mat &i
 
           error_vector_sqrt.at<double>(k,0) =(r -  r_p);
 
-          //error = error + (r -  r_p)*(r -  r_p)*weight.at<double>(k,0);
-         // cont_errors++;
-        }//
+        }
        else
        {
-           //BILINEAR INTERPOLATION
+           //BILINEAR INTERPOLATIO
+    	   /*
             if ( points3D_cam_p.at<double>(1,k) > 0 && points3D_cam_p.at<double>(1,k) < imsize_y && points3D_cam_p.at<double>(0,k) > 0 && points3D_cam_p.at<double>(0,k) < imsize_x)
             {
                double x_2 = points3D_cam_p.at<double>(0,k);
@@ -1476,18 +1471,15 @@ void compute_error_ic( cv::Mat &points3D_cam,cv::Mat &points3D_cam_p, cv::Mat &i
             {
                 color_p.at<double>(k,0) = sqrt(variance)*1;
             }
-
+			*/
             error_vector_sqrt.at<double>(k,0) = sqrt(variance)*1;
        }
     }
-    //cin>>cont;
 
 
     cv::pow(error_vector_sqrt, 2,error_vector);
     cv::Mat error_vector_check = error_vector.mul(weight);
     error = cv::sum(error_vector_check)[0];
-
-    //error = error / cont_errors;
 
 }
 
