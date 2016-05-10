@@ -29,8 +29,8 @@ distCoeffs: !!opencv-matrix
 calculate_superpixels: 1
 num_cameras_mapping_th: 9
 translational_ratio_th_min: 0.075
-limit_ratio_sing_val : 100
-limit_normalized_residual: 0.30
-matchings_active_search: 3
+limit_ratio_sing_val : 50
+limit_normalized_residual: 0.20
+matchings_active_search: 1
 
 

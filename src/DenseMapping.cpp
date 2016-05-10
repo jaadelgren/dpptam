@@ -734,7 +734,7 @@ void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int 
 
     for (int keyframes_aux = reference_image; keyframes_aux<=reference_image; keyframes_aux++)
     {
-        for (int z = 0; z <sizeof(superpixels_index); z++)
+        for (int z = 0; z <sizeof(superpixels_index)/sizeof(superpixels_index[0]); z++)
           {
             int keyframes = superpixels_index[z];
 

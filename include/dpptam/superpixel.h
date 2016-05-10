@@ -20,7 +20,8 @@ using namespace std;
 ///////////////////////////
 
 
-#define SPX_IS_LARGE 1000
+//#define SPX_IS_LARGE 1000
+#define SPX_IS_LARGE 1
 
 class superpixel {
   public:
