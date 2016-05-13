@@ -209,8 +209,9 @@ void fullydense_mapping(DenseMapping *pdense_mapper,ros::Publisher *pub_cloud)
              }
          }
 
-         int superpixels_index[5];
-         for (int i = 0;i<5;i++)
+         int spx_idx_length = 5;
+         int superpixels_index[spx_idx_length];
+         for (int i = 0;i<spx_idx_length;i++)
          {
              superpixels_index[i]=0;
          }
@@ -717,7 +718,7 @@ void calculate_3D_superpixels_from_semidense(float limit_ratio_sing_val,float li
 }
 
 
-void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int reference_image, int superpixels_index[])
+void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int reference_image, int superpixels_index[], int spx_idx_length)
 {
     int imsize_x = images.Im[reference_image]->image.cols;
     int imsize_y = images.Im[reference_image]->image.rows;
@@ -734,7 +735,7 @@ void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int 
 
     for (int keyframes_aux = reference_image; keyframes_aux<=reference_image; keyframes_aux++)
     {
-        for (int z = 0; z <sizeof(superpixels_index)/sizeof(superpixels_index[0]); z++)
+    	for (int z = 0; z <spx_idx_length; z++)
           {
             int keyframes = superpixels_index[z];
 
