@@ -124,7 +124,7 @@ void calculate_superpixels_and_setdata(Imagenes &images,  int reference_image);
 void calculate_3D_superpixels_from_semidense(float limit_ratio_sing_val,float limit_normalized_residual,Imagenes &images, cv::Mat &points6, int reference_image, float mean_value);
 
 ///active search of superpixels
-void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int reference_image, int superpixels_index[]);
+void  active_matching(Imagenes &images,vector<SuperpixelesImagen*> &supImg, int reference_image, int superpixels_index[], int spx_idx_length);
 ///active search of superpixels
 
 
