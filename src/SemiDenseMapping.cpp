@@ -1486,10 +1486,11 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
 					if (!original_init_good)
 					{
-						float l_init1_x = -xvalues_init1 / slope_x;
-						float l_init1_y = -yvalues_init1 / slope_y;
-						float l_init2_x = (image_cols-xvalues_init1) / slope_x;
-						float l_init2_y = (image_rows-yvalues_init1) / slope_y;
+						float l_init1_x = -xvalues_init1 / slope_x; // meaningful when xvalues_init1 < 0
+						float l_init1_y = -yvalues_init1 / slope_y; // meaningful when yvalues_init1 < 0
+						float l_init2_x = (xvalues_init1-image_cols) / (-slope_x); // meaningful when xvalues_init1 > image_cols, (-slope_x) because we should be counting backwards
+						float l_init2_y = (yvalues_init1-image_rows) / (-slope_y); // meaningful when yvalues_init1 > image_rows, (-slope_y) because we should be counting backwards
+
 
 						if (l_init1_x > l_init && l_init1_x < l_end)
 						{
@@ -1528,10 +1529,10 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
 					if (!original_end_good && count_intersections < 2)
 					{
-						float l_end1_x = -xvalues_end1 / slope_x;
-						float l_end1_y = -yvalues_end1 / slope_y;
-						float l_end2_x = (image_cols-xvalues_end1) / slope_x;
-						float l_end2_y = (image_rows-yvalues_end1) / slope_y;
+						float l_end1_x = -xvalues_end1 / slope_x; // meaningful when xvalues_end1 < 0
+						float l_end1_y = -yvalues_end1 / slope_y; // meaningful when yvalues_end1 < 0
+						float l_end2_x = (xvalues_end1-image_cols) / (-slope_x);  // meaningful when xvalues_end1 > image_cols, (-slope_x) because we should be counting backwards
+						float l_end2_y = (yvalues_end1-image_rows) / (-slope_y);  // meaningful when yvalues_end1 > image_rows, (-slope_y) because we should be counting backwards
 
 						if (l_end1_x > l_init && l_end1_x < l_end && init_case !=1)
 						{
