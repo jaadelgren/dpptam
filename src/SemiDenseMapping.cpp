@@ -214,34 +214,34 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
 
 
-                if ( (semidense_mapper-> num_cameras_mapping <  semidense_mapper->previous_images /*&& ( alternate == 1)*/ ) &&      (semidense_mapper->frames_previous_keyframe_used < pimages_previous_keyframe->getNumberOfImages()-1)   &&  \
-                         pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used > 0 )
-                {
-                    optimize_previous_frame = true;
+                if (semidense_mapper-> num_cameras_mapping <  semidense_mapper->previous_images)
+                	{
+                		if (semidense_mapper->frames_previous_keyframe_used < pimages_previous_keyframe->getNumberOfImages()-1)
+                		{
+                			optimize_previous_frame = true;
 
-					images.computeImage();
-					int current_images_size = images.getNumberOfImages()-1;
-					images.Im[current_images_size]->image = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image.clone();
-					images.Im[current_images_size]->R = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->R.clone();
-					images.Im[current_images_size]->image_gray=pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image_gray.clone();
-					images.Im[current_images_size]->t = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t.clone();
-					images.Im[current_images_size]->t_r = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t_r.clone();
-					images.Im[current_images_size]->fx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fx;
-					images.Im[current_images_size]->fy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fy;
-					images.Im[current_images_size]->cx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cx;
-					images.Im[current_images_size]->cy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cy;
-					images.Im[current_images_size]->error = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->error;
-					images.Im[current_images_size]->k1 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k1;
-					images.Im[current_images_size]->k2 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k2;
+							images.computeImage();
+							int current_images_size = images.getNumberOfImages()-1;
+							int previous_images_size = pimages_previous_keyframe->getNumberOfImages()-1;
 
-                    semidense_mapper->frames_previous_keyframe_used++;
-                }
+							images.Im[current_images_size]->image = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->image.clone();
+							images.Im[current_images_size]->R = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->R.clone();
+							images.Im[current_images_size]->image_gray=pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->image_gray.clone();
+							images.Im[current_images_size]->t = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->t.clone();
+							images.Im[current_images_size]->t_r = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->t_r.clone();
+							images.Im[current_images_size]->fx = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->fx;
+							images.Im[current_images_size]->fy = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->fy;
+							images.Im[current_images_size]->cx = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->cx;
+							images.Im[current_images_size]->cy = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->cy;
+							images.Im[current_images_size]->error = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->error;
+							images.Im[current_images_size]->k1 = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->k1;
+							images.Im[current_images_size]->k2 = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->k2;
+							images.Im[current_images_size]->num_keyframes = pimages_previous_keyframe->Im[ previous_images_size - semidense_mapper->frames_previous_keyframe_used]->num_keyframes;
 
-                int images_size = images.getNumberOfImages()-1;
+                			semidense_mapper->frames_previous_keyframe_used++;
+                		}
+                	}
 
-
-                int init_mapping = images_size;
-                int end_mapping = init_mapping+1;
 
 
                 int  regularization_size = 2;
@@ -332,7 +332,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         semidense_mapper->G_expanded = G_expanded.clone();
 
                         semidense_mapper->B = G < limit_grad;
-                        semidense_mapper->BB = G < limit_grad;
+                        semidense_mapper->BB = semidense_mapper->B.clone();
 
                         if (semidense_mapper-> num_keyframes >  semidense_mapper -> init_keyframes)
                         {
@@ -399,135 +399,89 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                     }
                     ////////////////////////////GET PHOTOMETRIC TERM_SD term_sd ///////////////////////////////////////
 
-                int keyframe_obj;
-                int image_to_be_added = 0;
-
-                float camera_translation;
-                cv::Mat camera1 = C1.clone();
-
-
-                if (optimize_previous_frame == 0)
-                {
-                    init_mapping = 1;
-                    end_mapping =  images.getNumberOfImages();
-                }
 
 
                 if (semidense_mapper->do_var_mapping < 0.5)
                 {
-                    for (int i=init_mapping; i< end_mapping ; i = i+1)
-                    {
 
-                                    keyframe_obj=i;
+                	int keyframe_obj=images.getNumberOfImages()-1;
+                	int image_to_be_added=keyframe_obj;
 
-                                    if (images.Im[keyframe_obj]-> is_used_for_mapping == 0 && semidense_mapper->do_var_mapping == 0)
-                                    {
+					if (images.Im[keyframe_obj]-> is_used_for_mapping == 0)
+					{
 
-                                            R2 = images.Im[keyframe_obj]->R;
-                                            t2 = images.Im[keyframe_obj]->t;
-                                            C2 = -R2.t()*t2;
+						R2 = images.Im[keyframe_obj]->R;
+						t2 = images.Im[keyframe_obj]->t;
+						C2 = -R2.t()*t2;
 
-                                            image_to_be_added=i;
-
-                                            C2.convertTo(C2,CV_64FC1);
-
-
-                                            float translational_ratio = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) +
-                                                                         fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) + \
-                                                                  fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) )
-                                                    / fabs(semidense_mapper-> mean_value);
-
-                                            camera_translation = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) + fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) + \
-                                                                  fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) );
+						C2.convertTo(C2,CV_64FC1);
 
 
 
-                                            if (semidense_mapper->num_cameras_mapping < 2 && num_keyframes > semidense_mapper->init_keyframes)
-                                            {
-                                                translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min / 4;
-                                            }
-                                            if (  num_keyframes >  semidense_mapper->init_keyframes)
-                                            {
+						float translational_ratio = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) +
+													 fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) + \
+											  fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) )
+								/ fabs(semidense_mapper-> mean_value);
 
 
-                                                if (semidense_mapper->num_cameras_mapping == 3 )
-                                                {
-                                                    translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *1.30;
-                                                }
-                                                if (semidense_mapper->num_cameras_mapping == 4)
-                                                {
-                                                    translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *1.70;
-                                                }
-                                                if (semidense_mapper->num_cameras_mapping == 5 )
-                                                {
-                                                    translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *2.0;
-                                                }
-                                            }
 
+						if (num_keyframes > semidense_mapper->init_keyframes)  // sdm->init_keyframes = 12
+						{
+							if (semidense_mapper->num_cameras_mapping < 2)
+								translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min / 4; // translational_ratio_th_min = 0.0075
 
-                                            if (translational_ratio > translational_ratio_th_min )
-                                            {
+							if (semidense_mapper->num_cameras_mapping == 3 )
+								translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *1.30;
 
-                                                cv::Mat epipolar_gradients;
+							if (semidense_mapper->num_cameras_mapping == 4)
+								translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *1.70;
 
-                                                int window_size = 3;
+							if (semidense_mapper->num_cameras_mapping == 5 )
+								translational_ratio_th_min = semidense_mapper-> translational_ratio_th_min *2.0;
+						}
 
-                                                float ratio_parallax = 1.5;
+						if (translational_ratio > translational_ratio_th_min )
+						{
 
-                                                get_photometric_errors_matrix_sd_exhaustive(images,  semidense_mapper-> inv_depths, semidense_mapper->X,  semidense_mapper->X_gradient_Magnitude,\
-                                                                                  semidense_mapper->X_gx_ex,semidense_mapper->X_gy_ey,reference_image,  semidense_mapper-> initial_inv_depth_sd, image_to_be_added,  \
-                                                                                  semidense_mapper->point_limits_for_sd,semidense_mapper->points_ref_im_sd,discretization,window_size,  \
-                                                                                  epipolar_gradients,semidense_mapper-> initial_inv_depth_inEveryCamera_uncertainty, \
-                                                                                  semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax,semidense_mapper->points_by_depth, \
-                                                                                  semidense_mapper-> t_r_ref,ratio_parallax, optimize_previous_frame,semidense_mapper-> previous_or_next_frame,\
-                                                                                  semidense_mapper-> GX, semidense_mapper-> GY, semidense_mapper->num_cameras_mapping,
-                                                                                  semidense_mapper-> max_inv_depth_initial_seed,semidense_mapper-> min_inv_depth_initial_seed);
+							cv::Mat epipolar_gradients;
 
-                                                if (optimize_previous_frame)
-                                                {
-                                                	semidense_mapper->frames_previous_keyframe_processed++;
-                                                	semidense_mapper->num_cameras_mapping++;
-                                                	semidense_mapper->num_cameras_mapping++;
-                                                }
-                                                else
-                                                {
-                                                	semidense_mapper->num_cameras_mapping++;
-                                                }
+							int window_size = 3;
 
+							float ratio_parallax = 1.5;
 
-                                                if (semidense_mapper->num_cameras_mapping > semidense_mapper->num_cameras_mapping_th+1)
-                                                {
-                                                        semidense_mapper->do_var_mapping = 1;
-                                                }
-                                            }
-                                    } // if used for mapping
-                    }
+							get_photometric_errors_matrix_sd_exhaustive(images,  semidense_mapper-> inv_depths, semidense_mapper->X,  semidense_mapper->X_gradient_Magnitude,\
+															  semidense_mapper->X_gx_ex,semidense_mapper->X_gy_ey,reference_image,  semidense_mapper-> initial_inv_depth_sd, image_to_be_added,  \
+															  semidense_mapper->point_limits_for_sd,semidense_mapper->points_ref_im_sd,discretization,window_size,  \
+															  epipolar_gradients,semidense_mapper-> initial_inv_depth_inEveryCamera_uncertainty, \
+															  semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax,semidense_mapper->points_by_depth, \
+															  semidense_mapper-> t_r_ref,ratio_parallax, optimize_previous_frame,semidense_mapper-> previous_or_next_frame,\
+															  semidense_mapper-> GX, semidense_mapper-> GY, semidense_mapper->num_cameras_mapping,
+															  semidense_mapper-> max_inv_depth_initial_seed,semidense_mapper-> min_inv_depth_initial_seed);
+
+							semidense_mapper->num_cameras_mapping++;
+
+							if (optimize_previous_frame)
+							{
+								// Additional increase of num_cameras_mapping to adjust the speed of "optimize_previous_frame"
+								semidense_mapper->num_cameras_mapping++;
+								semidense_mapper->frames_previous_keyframe_processed++;
+							}
+
+							if (semidense_mapper->num_cameras_mapping > semidense_mapper->num_cameras_mapping_th+1)
+							{
+									semidense_mapper->do_var_mapping = 1;
+							}
+						}
+					} // if used for mapping
                 }
 
 
 
                 if (semidense_mapper->do_var_mapping > 0.5)
                 {
-                    int print_depth_maps = 0;
 
-
-
-                    keyframe_obj=init_mapping;
-
-
-                    R2 = images.Im[keyframe_obj]->R;
-                    t2 = images.Im[keyframe_obj]->t;
-                    C2 = -R2.t()*t2;
-
-
-                    C2.convertTo(C2,CV_64FC1);
-
-
-                    camera_translation = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) + fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) + \
-                                          fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) );
-
-
-                    camera_translation = semidense_mapper->mean_value* semidense_mapper->translational_ratio_th_min;
+                	int print_depth_maps = 0;
+                	float camera_translation = semidense_mapper->mean_value* semidense_mapper->translational_ratio_th_min;
 
 
                     semidense_mapper -> convergence = 0;
@@ -876,8 +830,8 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                                         points_aux.at<float>(0,1) = seed_points_to_print.at<float>(i,1);
                                         points_aux.at<float>(0,2) = seed_points_to_print.at<float>(i,2);
 
-                                        point_to_camera = (fabs(camera1.at<double>(0,0) - seed_points_to_print.at<float>(i,0)) + fabs(camera1.at<double>(1,0) - seed_points_to_print.at<float>(i,1)) + \
-                                                              fabs(camera1.at<double>(2,0) - seed_points_to_print.at<float>(i,2)) );
+                                        point_to_camera = (fabs(C1.at<double>(0,0) - seed_points_to_print.at<float>(i,0)) + fabs(C1.at<double>(1,0) - seed_points_to_print.at<float>(i,1)) + \
+                                                              fabs(C1.at<double>(2,0) - seed_points_to_print.at<float>(i,2)) );
 
 
                                         float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
