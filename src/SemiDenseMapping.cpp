@@ -135,18 +135,7 @@ void ThreadSemiDenseMapper(Imagenes *images,Imagenes *images_previous_keyframe,S
         {insert_frame4mapping = true;}
 
 
-        if (semidense_mapper->num_cameras_mapping >semidense_mapper->num_cameras_mapping_th +1)
-        { semidense_mapper->do_var_mapping = 1;}
-
-
-        if (     (semidense_mapper->frames_previous_keyframe_used < images_previous_keyframe->getNumberOfImages()-1)   &&  \
-                (semidense_mapper->frames_previous_keyframe_processed < semidense_mapper->previous_images) &&
-                 images_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used > 0 \
-              && (semidense_mapper->do_initialization_tracking < 0.5) && ( semidense_mapper->images_size  > 1))
-        {insert_frame4mapping = true;}
-
-
-        if (insert_frame4mapping || semidense_mapper->do_var_mapping == 1)
+        if (insert_frame4mapping)
         {
             semidense_mapping(dense_mapper,semidense_mapper,semidense_tracker,Map,images,images_previous_keyframe,pub_cloud);
         }
@@ -195,19 +184,10 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                 cv::Mat R1,R2,C1,C2,t1,t2;
 
                 R1 = images.Im[reference_image]->R;
-                R2 = images.Im[images.getNumberOfImages()-1]->R;
                 t1 = images.Im[reference_image]->t;
-                t2 = images.Im[images.getNumberOfImages()-1]->t;
 
                 C1 = -R1.t()*t1;
-                C2 = -R2.t()*t2;
-
-
-                C2.convertTo(C2,CV_64FC1);
                 C1.convertTo(C1,CV_64FC1);
-
-                semidense_mapper -> translational_ratio =(fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) + fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) +
-                                       fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) )  / semidense_mapper-> mean_value;
 
                 float deviation_inv_depth_print_th = 0.30;
                 float neighboors_consistency_print = 0.93;
@@ -229,43 +209,38 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                 }
                semidense_mapper->previous_images = semidense_mapper->num_cameras_mapping_th/2+1+1;
 
-
-                int alternate = 1;
                 bool optimize_previous_frame  = false;
 
-                //
-                if(semidense_mapper-> num_keyframes > semidense_mapper -> init_keyframes)
-                {alternate=1;}
 
 
-                if ( (semidense_mapper-> num_cameras_mapping <  semidense_mapper->previous_images && ( alternate == 1) ) &&      (semidense_mapper->frames_previous_keyframe_used < pimages_previous_keyframe->getNumberOfImages()-1)   &&  \
+
+                if ( (semidense_mapper-> num_cameras_mapping <  semidense_mapper->previous_images /*&& ( alternate == 1)*/ ) &&      (semidense_mapper->frames_previous_keyframe_used < pimages_previous_keyframe->getNumberOfImages()-1)   &&  \
                          pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used > 0 )
                 {
                     optimize_previous_frame = true;
-                    for (int ii = 0;ii < 2;ii++)
-                    {
-                            images.computeImage();
-                            int current_images_size = images.getNumberOfImages()-1;
-                            images.Im[current_images_size]->image = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image.clone();
-                            images.Im[current_images_size]->R = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->R.clone();
-                            images.Im[current_images_size]->image_gray=pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image_gray.clone();
-                            images.Im[current_images_size]->t = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t.clone();
-                            images.Im[current_images_size]->t_r = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t_r.clone();
-                            images.Im[current_images_size]->fx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fx;
-                            images.Im[current_images_size]->fy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fy;
-                            images.Im[current_images_size]->cx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cx;
-                            images.Im[current_images_size]->cy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cy;
-                            images.Im[current_images_size]->error = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->error;
-                            images.Im[current_images_size]->k1 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k1;
-                            images.Im[current_images_size]->k2 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k2;
-                    }
+
+					images.computeImage();
+					int current_images_size = images.getNumberOfImages()-1;
+					images.Im[current_images_size]->image = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image.clone();
+					images.Im[current_images_size]->R = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->R.clone();
+					images.Im[current_images_size]->image_gray=pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->image_gray.clone();
+					images.Im[current_images_size]->t = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t.clone();
+					images.Im[current_images_size]->t_r = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->t_r.clone();
+					images.Im[current_images_size]->fx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fx;
+					images.Im[current_images_size]->fy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->fy;
+					images.Im[current_images_size]->cx = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cx;
+					images.Im[current_images_size]->cy = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->cy;
+					images.Im[current_images_size]->error = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->error;
+					images.Im[current_images_size]->k1 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k1;
+					images.Im[current_images_size]->k2 = pimages_previous_keyframe->Im[ pimages_previous_keyframe->getNumberOfImages()-1-semidense_mapper->frames_previous_keyframe_used]->k2;
+
                     semidense_mapper->frames_previous_keyframe_used++;
                 }
 
                 int images_size = images.getNumberOfImages()-1;
 
 
-                int init_mapping = images_size-1;
+                int init_mapping = images_size;
                 int end_mapping = init_mapping+1;
 
 
@@ -302,7 +277,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         points_aux.convertTo(points_aux, CV_32FC1);
                         get_inverse_depth(images,points_aux,inv_depths_borrar,semidense_mapper-> depth_step,
                                           reference_image,discretization,semidense_mapper-> mean_value,depth_map_points_tracked,1,variance_points_tracked);
-                        points_aux.convertTo(points_aux, CV_64FC1);
 
 
                         semidense_mapper -> depth_map_points_tracked = depth_map_points_tracked.clone();
@@ -312,7 +286,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         points6.convertTo(points6, CV_32FC1);
                         get_inverse_depth(images,points6,semidense_mapper-> inv_depths,semidense_mapper-> depth_step,reference_image,
                                           discretization,semidense_mapper-> mean_value,semidense_mapper->depth_map,using_close_points,variance_points_tracked);
-                        points6.convertTo(points6, CV_64FC1);
+
 
 
                         cv::Mat gray_image = images.Im[reference_image]->image_gray.clone();
@@ -336,41 +310,24 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                          if (limit_grad_aux < limit_grad){limit_grad = limit_grad_aux;}
 
                         cv::Mat G_expanded = G+1;
+
                         for (int i=corner; i<G.rows-corner ; i++)
-                        {
-                            for (int j=corner; j < G.cols-corner;j++)
-                            {
-                                if (G.at<float>(i,j) < limit_grad)
-                                {
-                                    G_expanded.at<float>(i,j) =   limit_grad-0.1;
-                                }
-                            }
-                        }
-
-                        float num_potential_points = 0;
-
-                        //// REMOVE POINTS WHICH HAVE ONLY A FEW NEIGHBOORS
-                        for (int i = corner; i < images.Im[reference_image]->image.rows-corner; i++)
-                        {
-                            for (int j = corner; j < images.Im[reference_image]->image.cols-corner; j++)
-                            {
-                                    if (G.at<float>(i,j) <  limit_grad)
-                                    {
-                                            int cont_neighbours = 0;
-                                            for (int ii = i-1; ii <= i+1; ii++)
-                                            {
-                                                for (int jj = j-1; jj <= j+1; jj++)
-                                                {
-                                                        cont_neighbours++;
-                                                        G_expanded.at<float>(ii,jj)  =  limit_grad-0.1;
-                                                }
-                                            }
-                                            num_potential_points++;
-                                      }
-                            }
-                        }
-
-
+						{
+							for (int j=corner; j < G.cols-corner;j++)
+							{
+								if (G.at<float>(i,j) < limit_grad)
+								{
+									for (int ii = i-1; ii <= i+1; ii++)
+									{
+										for (int jj = j-1; jj <= j+1; jj++)
+										{
+											G_expanded.at<float>(ii,jj)  =  limit_grad-0.1;
+											// All numbers between [1, 2]    // Some number between [0.7, 0.9]
+										}
+									}
+								}
+							}
+						}
 
                         semidense_mapper->G_expanded = G_expanded.clone();
 
@@ -426,8 +383,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         points_i_sd = points_i_sd.t();
 
                         semidense_mapper-> initial_inv_depth_sd = cv::Mat::zeros(points_i_sd.cols, 1, CV_32FC1) + semidense_mapper-> inv_depths.at<float>(0,0);
-                        semidense_mapper-> initial_inv_depth_sd = cv::Mat::zeros(points_i_sd.cols, 1, CV_32FC1) + semidense_mapper-> inv_depths.at<float>(0,0);
-                        semidense_mapper-> initial_inv_depth_sd = cv::Mat::zeros(points_i_sd.cols, 1, CV_32FC1) + semidense_mapper-> inv_depths.at<float>(0,0);
                         semidense_mapper-> max_inv_depth_initial_seed = cv::Mat::zeros(points_i_sd.cols, 1, CV_32FC1) + semidense_mapper-> inv_depths.at<float>(0,0) - 1000;
                         semidense_mapper-> min_inv_depth_initial_seed = cv::Mat::zeros(points_i_sd.cols, 1, CV_32FC1) + semidense_mapper-> inv_depths.at<float>(0,0) + 1000;
 
@@ -439,12 +394,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         {
                             semidense_mapper->point_limits_for_sd.computeError();
 
-                            if (l==0 || l == discretization-1)
-                            {
-                                points_i2_sd = points_i_sd / semidense_mapper-> inv_depths.at<float>(l,0);
-                                points_i2_sd = images.Im[reference_image]->R.t() * (points_i2_sd - semidense_mapper-> t_r_ref);
-                                semidense_mapper->point_limits_for_sd.ph_error[l] = points_i2_sd.clone();
-                            }
                         }
 
                     }
@@ -454,7 +403,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                 int image_to_be_added = 0;
 
                 float camera_translation;
-                cv::Mat camera1;
+                cv::Mat camera1 = C1.clone();
 
 
                 if (optimize_previous_frame == 0)
@@ -474,22 +423,13 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                                     if (images.Im[keyframe_obj]-> is_used_for_mapping == 0 && semidense_mapper->do_var_mapping == 0)
                                     {
 
-                                            R1 = images.Im[reference_image]->R;
-                                            t1 = images.Im[reference_image]->t;
-
-
                                             R2 = images.Im[keyframe_obj]->R;
                                             t2 = images.Im[keyframe_obj]->t;
-
-                                            C1 = -R1.t()*t1;
                                             C2 = -R2.t()*t2;
 
                                             image_to_be_added=i;
 
                                             C2.convertTo(C2,CV_64FC1);
-                                            C1.convertTo(C1,CV_64FC1);
-
-                                            camera1 = C1.clone();
 
 
                                             float translational_ratio = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) +
@@ -501,9 +441,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                                                                   fabs(C1.at<double>(2,0) - C2.at<double>(2,0)) );
 
 
-
-
-                                            //if (num_keyframes > semidense_mapper->init_keyframes)
 
                                             if (semidense_mapper->num_cameras_mapping < 2 && num_keyframes > semidense_mapper->init_keyframes)
                                             {
@@ -547,8 +484,17 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                                                                                   semidense_mapper-> max_inv_depth_initial_seed,semidense_mapper-> min_inv_depth_initial_seed);
 
                                                 if (optimize_previous_frame)
-                                                {semidense_mapper->frames_previous_keyframe_processed++;}
-                                                semidense_mapper->num_cameras_mapping++;
+                                                {
+                                                	semidense_mapper->frames_previous_keyframe_processed++;
+                                                	semidense_mapper->num_cameras_mapping++;
+                                                	semidense_mapper->num_cameras_mapping++;
+                                                }
+                                                else
+                                                {
+                                                	semidense_mapper->num_cameras_mapping++;
+                                                }
+
+
                                                 if (semidense_mapper->num_cameras_mapping > semidense_mapper->num_cameras_mapping_th+1)
                                                 {
                                                         semidense_mapper->do_var_mapping = 1;
@@ -568,22 +514,13 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
                     keyframe_obj=init_mapping;
 
-                    R1 = images.Im[reference_image]->R;
-                    t1 = images.Im[reference_image]->t;
-
 
                     R2 = images.Im[keyframe_obj]->R;
                     t2 = images.Im[keyframe_obj]->t;
-
-                    C1 = -R1.t()*t1;
                     C2 = -R2.t()*t2;
 
 
                     C2.convertTo(C2,CV_64FC1);
-                    C1.convertTo(C1,CV_64FC1);
-
-                    camera1 = C1.clone();
-
 
 
                     camera_translation = (fabs(C1.at<double>(0,0) - C2.at<double>(0,0)) + fabs(C1.at<double>(1,0) - C2.at<double>(1,0)) + \
@@ -1544,10 +1481,6 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
                 float l_opt = 0;
                 float step_epipolar = 1;
-                /*if (num_epipolar_search > 20.0)
-                {
-                    step_epipolar = num_epipolar_search / 20.0;
-                }*/
 
                 float X_gx_ex_aux = 0.0;
                 float X_gy_ey_aux = 0.0;
@@ -1560,86 +1493,144 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
 
                 if (xvalues_init1 > 0 && xvalues_init1 < image_cols-1 && xvalues_end1 > 0 && xvalues_end1 < image_cols-1 &&
-                        yvalues_init1 > 0 && yvalues_init1 < image_rows-1 && yvalues_end1 > 0 && yvalues_end1 < image_rows-1)
-                {
-                    l_init = 0;
-                    l_end = num_epipolar_search+1;
-                }
-                else
-                {
-                    float l_init_x = l_init;
-                    float l_init_y = l_init;
-                    float l_end_x = l_end;
-                    float l_end_y = l_end;
+                				yvalues_init1 > 0 && yvalues_init1 < image_rows-1 && yvalues_end1 > 0 && yvalues_end1 < image_rows-1)
+				{
+				}
+				else
+				{
+					float l_init_x, l_init_y, l_end_x, l_end_y;
 
-                    int count_intersections = 0;
+					int count_intersections = 0;
 
-                    cv::Mat intersections(0,1,CV_32FC1);
+					cv::Mat intersections(0,1,CV_32FC1);
 
-                    l_init_x = -xvalues_init1 / slope_x;
-                    if (l_init_x > l_init && l_init_x < l_end)
-                    {
-                        count_intersections++;
-                        intersections.push_back(l_init_x);
-                    }
+					bool original_init_good = false;
+					bool original_end_good = false;
 
-                    l_init_y = -yvalues_init1 / slope_y;
-                    if (l_init_y > l_init && l_init_y < l_end)
-                    {
-                        count_intersections++;
-                        intersections.push_back(l_init_y);
-                    }
+					if (xvalues_init1 > 0 && xvalues_init1 < image_cols-1
+						&& yvalues_init1 > 0 && yvalues_init1 < image_rows-1)
+					{
+						count_intersections++;
+						intersections.push_back(l_init);
+						original_init_good = true;
 
-                    l_end_x = (image_rows-xvalues_init1) / slope_x;
-                    if (l_end_x > l_init && l_end_x < l_end)
-                    {
-                        count_intersections++;
-                        intersections.push_back(l_end_x);
-                    }
+					}
+					else
+					{
+						if (xvalues_end1 > 0 && xvalues_end1 < image_cols-1
+							&& yvalues_end1 > 0 && yvalues_end1 < image_rows-1)
+						{
+							count_intersections++;
+							intersections.push_back(l_end);
+							original_end_good = true;
+						}
 
-                    l_end_y = (image_cols-yvalues_init1) / slope_y;
-                    if (l_end_y > l_init && l_end_y < l_end)
-                    {
-                        count_intersections++;
-                        intersections.push_back(l_end_y);
-                    }
-
-                    if (count_intersections == 1)
-                    {
-                                if (xvalues_init1 > 0 && xvalues_init1 < image_cols-1 && yvalues_init1 > 0 && yvalues_init1 < image_rows-1)
-                                {
-                                    intersections.push_back(l_init);
-                                }
-                                else
-                                {
-                                    intersections.push_back(l_end);
-                                }
-                                count_intersections++;
-                    }
-
-                    if (count_intersections == 2)
-                    {
-                        if (intersections.at<float>(0,0) < intersections.at<float>(1,0))
-                        {
-                            l_init = intersections.at<float>(0,0);
-                            l_end = intersections.at<float>(1,0);
-                        }
-                        else
-                        {
-                            l_end = intersections.at<float>(0,0);
-                            l_init = intersections.at<float>(1,0);
-                        }
-                    }
-
-                 }
+					}
 
 
-                if (epipolar_inside_image && l_end > l_init && l_end - l_init < 400)
-                {
-                }
-                else{
-                    num_wrong_epipolar_lines++;
-                }
+					int init_case = 0;
+
+					if (!original_init_good)
+					{
+						float l_init1_x = -xvalues_init1 / slope_x;
+						float l_init1_y = -yvalues_init1 / slope_y;
+						float l_init2_x = (image_cols-xvalues_init1) / slope_x;
+						float l_init2_y = (image_rows-yvalues_init1) / slope_y;
+
+						if (l_init1_x > l_init && l_init1_x < l_end)
+						{
+							count_intersections++;
+							intersections.push_back(l_init1_x);
+							init_case = 1;
+						}
+						else
+						{
+							if (l_init1_y > l_init && l_init1_y < l_end)
+							{
+								count_intersections++;
+								intersections.push_back(l_init1_y);
+								init_case = 2;
+							}
+							else
+							{
+								if (l_init2_x > l_init && l_init2_x < l_end)
+								{
+									count_intersections++;
+									intersections.push_back(l_init2_x);
+									init_case = 3;
+								}
+								else
+								{
+									if (l_init2_y > l_init && l_init2_y < l_end)
+									{
+										count_intersections++;
+										intersections.push_back(l_init2_y);
+										init_case = 4;
+									}
+								}
+							}
+						}
+					}
+
+					if (!original_end_good && count_intersections < 2)
+					{
+						float l_end1_x = -xvalues_end1 / slope_x;
+						float l_end1_y = -yvalues_end1 / slope_y;
+						float l_end2_x = (image_cols-xvalues_end1) / slope_x;
+						float l_end2_y = (image_rows-yvalues_end1) / slope_y;
+
+						if (l_end1_x > l_init && l_end1_x < l_end && init_case !=1)
+						{
+							count_intersections++;
+							intersections.push_back(l_end1_x);
+						}
+						else
+						{
+							if (l_end1_y > l_init && l_end1_y < l_end && init_case != 2)
+							{
+								count_intersections++;
+								intersections.push_back(l_end1_y);
+							}
+							else
+							{
+								if (l_end2_x > l_init && l_end2_x < l_end && init_case != 3)
+								{
+									count_intersections++;
+									intersections.push_back(l_end2_x);
+								}
+								else
+								{
+									if (l_end2_y > l_init && l_end2_y < l_end && init_case != 4)
+									{
+										count_intersections++;
+										intersections.push_back(l_end2_y);
+									}
+								}
+							}
+						}
+					}
+
+
+					if (count_intersections == 2)
+					{
+						if (intersections.at<float>(0,0) < intersections.at<float>(1,0))
+						{
+							l_init = intersections.at<float>(0,0);
+							l_end = intersections.at<float>(1,0);
+						}
+						else
+						{
+							l_end = intersections.at<float>(0,0);
+							l_init = intersections.at<float>(1,0);
+						}
+					}
+					else
+					{
+						l_init = 0;
+						l_end = -100;
+					}
+
+				 }
 
                 if (epipolar_inside_image && l_end > l_init && l_end - l_init < 400)
                 {
