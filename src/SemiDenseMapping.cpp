@@ -1581,8 +1581,7 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 					}
 					else
 					{
-						l_init = 0;
-						l_end = -100;
+						epipolar_inside_image = false;
 					}
 
 				 }
