@@ -66,13 +66,12 @@ SemiDenseMapping::SemiDenseMapping():do_initialization(1),do_optimization(0), do
     overlap_tracking = 1;
 
     int discretization = (int)fs2["discretization"];
-    for (int l=0; l<discretization; l++)
-    {
-        X.computeError();
-        X_gradient_Magnitude.computeError();
-        X_gx_ex.computeError();
-        X_gy_ey.computeError();
-    }
+
+	X.computeError();
+	X_gradient_Magnitude.computeError();
+	X_gx_ex.computeError();
+	X_gy_ey.computeError();
+
 
     last_frame_mapped  = 0;
 
@@ -489,12 +488,10 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                     semidense_mapper->frames_previous_keyframe_used = 0;
 
                     cv::Mat deviation_inv_depth(semidense_mapper-> initial_inv_depth_sd.rows,1,CV_32FC1);
-                    for (unsigned int l = 0; l < discretization; l = l+1)
-                    {
-                        semidense_mapper->X_gx_ex.ph_error[l] = semidense_mapper->X_gx_ex.ph_error[l]/semidense_mapper->num_cameras_mapping;
-                        semidense_mapper->X_gy_ey.ph_error[l] = semidense_mapper->X_gy_ey.ph_error[l]/semidense_mapper->num_cameras_mapping;
-                        semidense_mapper->X_gradient_Magnitude.ph_error[l] =semidense_mapper-> X_gradient_Magnitude.ph_error[l]/(semidense_mapper->num_cameras_mapping*50);;
-                    }
+
+                    semidense_mapper->X_gx_ex.ph_error[0] = semidense_mapper->X_gx_ex.ph_error[0]/semidense_mapper->num_cameras_mapping;
+					semidense_mapper->X_gy_ey.ph_error[0] = semidense_mapper->X_gy_ey.ph_error[0]/semidense_mapper->num_cameras_mapping;
+					semidense_mapper->X_gradient_Magnitude.ph_error[0] =semidense_mapper-> X_gradient_Magnitude.ph_error[0]/(semidense_mapper->num_cameras_mapping*50);
 
                     cv::Mat gray_image = images.Im[reference_image]->image_gray.clone();
                     gray_image.convertTo(gray_image,CV_32FC1);
@@ -1276,18 +1273,14 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
             cv::Mat errores;
 
-            for (unsigned int l = 0; l < discretization; l++)
-            {
-                //X.computeError();
-                errores = cv::Mat::zeros(initial_inv_depth.rows, 1, CV_32FC1);
-                if (X.ph_error[l].empty())
-                {
-                    errores.copyTo(X.ph_error[l]);
-                    errores.copyTo(X_gx_ex.ph_error[l]);
-                    errores.copyTo(X_gy_ey.ph_error[l]);
-                    errores.copyTo(X_gradient_Magnitude.ph_error[l]);
-                }
-            }
+            errores = cv::Mat::zeros(initial_inv_depth.rows, 1, CV_32FC1);
+			if (X.ph_error[0].empty())
+			{
+				errores.copyTo(X.ph_error[0]);
+				errores.copyTo(X_gx_ex.ph_error[0]);
+				errores.copyTo(X_gy_ey.ph_error[0]);
+				errores.copyTo(X_gradient_Magnitude.ph_error[0]);
+			}
 
             errores = cv::Mat::zeros(initial_inv_depth.rows, 1, CV_32FC1) + INFINITY;
             int  m = image_to_be_added;
@@ -1295,10 +1288,12 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
 
             cv::Mat image_o_gray = images.Im[m]->image_gray.clone();
-            cv::Mat image_i_gray = images.Im[reference_image]->image_gray.clone();
+			cv::Mat image_i_gray = images.Im[reference_image]->image_gray.clone();
 
-            cv::Mat  gray_image = image_i_gray.clone();
-            gray_image.convertTo(gray_image,CV_32FC1);
+			image_i_gray.convertTo(image_i_gray,CV_32FC1);
+			image_o_gray.convertTo(image_o_gray,CV_32FC1);
+
+			cv::Mat  gray_image = image_i_gray.clone();
 
             if (num_cameras_mapping == 0)
             {
@@ -1316,13 +1311,6 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
                 cv::divide(GX, G,GX,1);
                 cv::divide(GY, G,GY,1);
             }
-
-
-            image_i_gray.convertTo(image_i_gray,CV_32FC1);
-            image_o_gray.convertTo(image_o_gray,CV_32FC1);
-
-
-
 
             cv::Mat points_i_2;
             cv::Mat points_o;
@@ -1373,17 +1361,17 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
             epipolar_gradients = epipolar_gradients - points_o.rowRange(0,2);
             epipolar_gradients = cv::abs(epipolar_gradients);
 
-            cv::Mat epipolar_gradientX2,epipolar_gradientY2;
-            cv::Mat epipolar_gradientX = cv::abs(epipolar_gradients.colRange(0,points_o.cols).rowRange(0,1));
-            cv::pow(epipolar_gradientX,2,epipolar_gradientX2);
-            cv::Mat epipolar_gradientY = cv::abs(epipolar_gradients.colRange(0,points_o.cols).rowRange(1,2));
-            cv::pow(epipolar_gradientY,2,epipolar_gradientY2);
-            cv::Mat epipolar_gradientT = epipolar_gradientX2+epipolar_gradientY2;
-            cv::pow(epipolar_gradientT,0.5,epipolar_gradientT);
+        	cv::Mat epipolar_gradientX2,epipolar_gradientY2;
+        	cv::Mat epipolar_gradientX = epipolar_gradients.colRange(0,points_o.cols).rowRange(0,1).clone();
+        	cv::pow(epipolar_gradientX,2,epipolar_gradientX2);
+        	cv::Mat epipolar_gradientY = epipolar_gradients.colRange(0,points_o.cols).rowRange(1,2).clone();
+        	cv::pow(epipolar_gradientY,2,epipolar_gradientY2);
 
+        	cv::Mat epipolar_gradientT = epipolar_gradientX2+epipolar_gradientY2;
+        	cv::pow(epipolar_gradientT,0.5,epipolar_gradientT);
 
-            cv::divide( epipolar_gradientX, epipolar_gradientT, epipolar_gradientX,1);
-            cv::divide( epipolar_gradientY, epipolar_gradientT, epipolar_gradientY,1);
+        	cv::divide( epipolar_gradientX, epipolar_gradientT, epipolar_gradientX,1);
+        	cv::divide( epipolar_gradientY, epipolar_gradientT, epipolar_gradientY,1);
 
 
 
@@ -1396,8 +1384,6 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
             cv::Mat eee = (yvalues_end-yvalues_init) / (inv_X3_end-inv_X3_init);
             cv::Mat fff = yvalues_init -eee.mul(inv_X3_init);
-
-            int window_size_end =  window_size+1;
 
             cv::Mat xvalues_final = xvalues_init.clone();
             cv::Mat yvalues_final = yvalues_init.clone();
@@ -1517,9 +1503,9 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
                         {
                                    double error = 0;
 
-                                  for (int mm=-window_size;mm < window_size_end;mm = mm+2)
+                                  for (int mm=-window_size;mm < window_size+1;mm = mm+2)
                                   {
-                                      for (int nn = -window_size; nn < window_size_end; nn=nn+2)
+                                      for (int nn = -window_size; nn < window_size+1; nn=nn+2)
                                       {
                                           error   += std::abs(image_i_gray.at<float>(n_y_ref+nn,n_x_ref+mm) -image_o_gray.at<float>(n_y+nn,n_x+mm));
                                       }
@@ -1555,9 +1541,9 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
                         {
                               double error = 0;
 
-                              for (int mm=-window_size;mm < window_size_end;mm = mm+1)
+                              for (int mm=-window_size;mm < window_size+1;mm = mm+1)
                               {
-                                for (int nn = -window_size; nn < window_size_end; nn=nn+1)
+                                for (int nn = -window_size; nn < window_size+1; nn=nn+1)
                                 {
                                       error   += fabs(image_i_gray.at<float>(n_y_ref+nn,n_x_ref+mm) -image_o_gray.at<float>(n_y+nn,n_x+mm));
                                 }
