@@ -204,4 +204,7 @@ template <typename T>
 void filter_imagenes( T &images_dense, int num_keyframes );
 
 void copy_imagenes(Imagenes &images, Imagenes &images_map);
+
+void calculate_l_dev(float &l_dev, float xvalue, float yvalue, float slope_x, float slope_y, int image_rows, int image_cols);
+
 #endif
