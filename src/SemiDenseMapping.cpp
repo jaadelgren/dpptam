@@ -1458,131 +1458,42 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 
 					cv::Mat intersections(0,1,CV_32FC1);
 
-					bool original_init_good = false;
-					bool original_end_good = false;
+					// Check if the original init/end points are inside the image boundary:
+					// If there is one inside, then rename it as init point.
+					bool one_inside = false;
 
 					if (xvalues_init1 > 0 && xvalues_init1 < image_cols-1
 						&& yvalues_init1 > 0 && yvalues_init1 < image_rows-1)
 					{
-						count_intersections++;
-						intersections.push_back(l_init);
-						original_init_good = true;
-
+						one_inside = true;
 					}
 					else
 					{
 						if (xvalues_end1 > 0 && xvalues_end1 < image_cols-1
 							&& yvalues_end1 > 0 && yvalues_end1 < image_rows-1)
 						{
-							count_intersections++;
-							intersections.push_back(l_end);
-							original_end_good = true;
-						}
+							float temp_x = xvalues_init1;
+							float temp_y = yvalues_init1;
+							xvalues_init1 = xvalues_end1;
+							yvalues_init1 = yvalues_end1;
+							xvalues_end1 = temp_x;
+							yvalues_end1 = temp_y;
 
+							one_inside = true;
+						}
 					}
 
-
-					int init_case = 0;
-
-					if (!original_init_good)
+					float l_dev_init, l_dev_end;
+					if (!one_inside) // if both points are not inside the image boundary
 					{
-						float l_init1_x = -xvalues_init1 / slope_x; // meaningful when xvalues_init1 < 0
-						float l_init1_y = -yvalues_init1 / slope_y; // meaningful when yvalues_init1 < 0
-						float l_init2_x = (xvalues_init1-image_cols) / (-slope_x); // meaningful when xvalues_init1 > image_cols, (-slope_x) because we should be counting backwards
-						float l_init2_y = (yvalues_init1-image_rows) / (-slope_y); // meaningful when yvalues_init1 > image_rows, (-slope_y) because we should be counting backwards
-
-
-						if (l_init1_x > l_init && l_init1_x < l_end)
-						{
-							count_intersections++;
-							intersections.push_back(l_init1_x);
-							init_case = 1;
-						}
-						else
-						{
-							if (l_init1_y > l_init && l_init1_y < l_end)
-							{
-								count_intersections++;
-								intersections.push_back(l_init1_y);
-								init_case = 2;
-							}
-							else
-							{
-								if (l_init2_x > l_init && l_init2_x < l_end)
-								{
-									count_intersections++;
-									intersections.push_back(l_init2_x);
-									init_case = 3;
-								}
-								else
-								{
-									if (l_init2_y > l_init && l_init2_y < l_end)
-									{
-										count_intersections++;
-										intersections.push_back(l_init2_y);
-										init_case = 4;
-									}
-								}
-							}
-						}
-					}
-
-					if (!original_end_good && count_intersections < 2)
-					{
-						float l_end1_x = -xvalues_end1 / slope_x; // meaningful when xvalues_end1 < 0
-						float l_end1_y = -yvalues_end1 / slope_y; // meaningful when yvalues_end1 < 0
-						float l_end2_x = (xvalues_end1-image_cols) / (-slope_x);  // meaningful when xvalues_end1 > image_cols, (-slope_x) because we should be counting backwards
-						float l_end2_y = (yvalues_end1-image_rows) / (-slope_y);  // meaningful when yvalues_end1 > image_rows, (-slope_y) because we should be counting backwards
-
-						if (l_end1_x > l_init && l_end1_x < l_end && init_case !=1)
-						{
-							count_intersections++;
-							intersections.push_back(l_end1_x);
-						}
-						else
-						{
-							if (l_end1_y > l_init && l_end1_y < l_end && init_case != 2)
-							{
-								count_intersections++;
-								intersections.push_back(l_end1_y);
-							}
-							else
-							{
-								if (l_end2_x > l_init && l_end2_x < l_end && init_case != 3)
-								{
-									count_intersections++;
-									intersections.push_back(l_end2_x);
-								}
-								else
-								{
-									if (l_end2_y > l_init && l_end2_y < l_end && init_case != 4)
-									{
-										count_intersections++;
-										intersections.push_back(l_end2_y);
-									}
-								}
-							}
-						}
+						calculate_l_dev(l_dev_init, xvalues_init1, yvalues_init1, slope_x, slope_y, image_rows, image_cols);
+						l_init = l_dev_init;
 					}
 
 
-					if (count_intersections == 2)
-					{
-						if (intersections.at<float>(0,0) < intersections.at<float>(1,0))
-						{
-							l_init = intersections.at<float>(0,0);
-							l_end = intersections.at<float>(1,0);
-						}
-						else
-						{
-							l_end = intersections.at<float>(0,0);
-							l_init = intersections.at<float>(1,0);
-						}
-					}
-					else
-					{
-						epipolar_inside_image = false;
-					}
+					// l_end calculation: because it will be ALWAYS outside the image boundary!
+					calculate_l_dev(l_dev_end, xvalues_end1, yvalues_end1, slope_x, slope_y, image_rows, image_cols);
+					l_end = l_end - l_dev_end;
 
 				 }
 
@@ -2019,3 +1930,44 @@ void copy_imagenes(Imagenes &images, Imagenes &images_map)
 }
 
 
+
+void calculate_l_dev(float &l_dev, float xvalue, float yvalue, float slope_x, float slope_y, int image_rows, int image_cols)
+{
+	float value;
+	float slope;
+	int image_bound;
+	float abs_slope_x = abs(slope_x);
+	float abs_slope_y = abs(slope_y);
+
+	// Use the one with smaller slope:
+
+	if (abs_slope_x < abs_slope_y)
+	{
+		value = xvalue;
+		slope = abs_slope_x;
+		image_bound = image_cols;
+	}
+	else
+	{
+		value = yvalue;
+		slope = abs_slope_y;
+		image_bound = image_rows;
+	}
+
+
+	float dev = 0;
+
+	if (value < 0)
+	{
+		dev = -value;
+	}
+	else
+	{
+		if (value > image_bound)
+		{
+			dev = value - image_bound;
+		}
+	}
+
+	l_dev = dev/slope;
+}
