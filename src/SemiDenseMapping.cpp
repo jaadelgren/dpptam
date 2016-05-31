@@ -1590,14 +1590,14 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
                         intersections.push_back(l_init_y);
                     }
 
-                    l_end_x = (image_rows-xvalues_init1) / slope_x;
+                    l_end_x = (image_cols-xvalues_init1) / slope_x;
                     if (l_end_x > l_init && l_end_x < l_end)
                     {
                         count_intersections++;
                         intersections.push_back(l_end_x);
                     }
 
-                    l_end_y = (image_cols-yvalues_init1) / slope_y;
+                    l_end_y = (image_rows-yvalues_init1) / slope_y;
                     if (l_end_y > l_init && l_end_y < l_end)
                     {
                         count_intersections++;
