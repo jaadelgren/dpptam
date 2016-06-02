@@ -491,16 +491,14 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
                     semidense_mapper->X_gx_ex.ph_error[0] = semidense_mapper->X_gx_ex.ph_error[0]/semidense_mapper->num_cameras_mapping;
 					semidense_mapper->X_gy_ey.ph_error[0] = semidense_mapper->X_gy_ey.ph_error[0]/semidense_mapper->num_cameras_mapping;
-					semidense_mapper->X_gradient_Magnitude.ph_error[0] =semidense_mapper-> X_gradient_Magnitude.ph_error[0]/(semidense_mapper->num_cameras_mapping*50);
+
 
                     cv::Mat gray_image = images.Im[reference_image]->image_gray.clone();
                     gray_image.convertTo(gray_image,CV_32FC1);
 
-                    cv::Mat depth_map_points_tracked = semidense_mapper->depth_map*0;
-                    cv::Mat variance_points_tracked = semidense_mapper->depth_map*0;
 
-                    depth_map_points_tracked = semidense_mapper -> depth_map_points_tracked.clone();
-                    variance_points_tracked = semidense_mapper -> variance_points_tracked.clone();
+                    cv::Mat depth_map_points_tracked = semidense_mapper -> depth_map_points_tracked.clone();
+                    cv::Mat variance_points_tracked = semidense_mapper -> variance_points_tracked.clone();
 
                     vector<cv::Mat> init_inv_dephts_maps_scale(2);
                     init_inv_dephts_maps_scale[0] = cv::abs(semidense_mapper->depth_map.clone());
@@ -511,7 +509,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                     cv::Mat be_outlier_print = semidense_mapper-> initial_inv_depth_sd.clone()*0;
                     cv::Mat final_variances = semidense_mapper-> initial_inv_depth_sd.clone()*0;
 
-                    semidense_mapper->X.ph_error[0] = semidense_mapper->X.ph_error[0]/semidense_mapper->num_cameras_mapping;
 
                     convergence_test(semidense_mapper,be_outlier,be_outlier_print,deviation_inv_depth,final_variances,inv_depth_disparity_th,inv_depth_disparity_print_th);
 
@@ -1084,14 +1081,12 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
                     semidense_mapper->set_points_new_map(points_new_map_aux);
 
-                    for (int l=0; l<semidense_mapper->X.ph_error.size(); l++)
-                    {
-                        semidense_mapper->X.ph_error[l].release();
-                        semidense_mapper->X_gx_ex.ph_error[l].release();
-                        semidense_mapper->X_gy_ey.ph_error[l].release();
-                        semidense_mapper->X_gradient_Magnitude.ph_error[l].release();
-                        semidense_mapper->point_limits_for_sd.ph_error[l].release();
-                    }
+            		for (unsigned int l=0; l<semidense_mapper->X_gx_ex.ph_error.size(); l++)
+            		{
+            			semidense_mapper->X_gx_ex.ph_error[l].release();
+            			semidense_mapper->X_gy_ey.ph_error[l].release();
+            			semidense_mapper->point_limits_for_sd.ph_error[l].release();
+            		}
 
 
                     //////////////////////////////////////////////////// JOIN CLOSEST MAPS and prepare initialize dense mapper
@@ -1270,13 +1265,11 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
             cv::Mat errores;
 
             errores = cv::Mat::zeros(initial_inv_depth.rows, 1, CV_32FC1);
-			if (X.ph_error[0].empty())
-			{
-				errores.copyTo(X.ph_error[0]);
-				errores.copyTo(X_gx_ex.ph_error[0]);
-				errores.copyTo(X_gy_ey.ph_error[0]);
-				errores.copyTo(X_gradient_Magnitude.ph_error[0]);
-			}
+        	if (X_gx_ex.ph_error[0].empty())
+        	{
+        		errores.copyTo(X_gx_ex.ph_error[0]);
+        		errores.copyTo(X_gy_ey.ph_error[0]);
+        	}
 
             errores = cv::Mat::zeros(initial_inv_depth.rows, 1, CV_32FC1) + INFINITY;
             int  m = image_to_be_added;
@@ -1623,11 +1616,8 @@ void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
     float counter_converged_points = 0;
 
     int minim_images  = 4;
-    int minim_prev_and_post_images  = 2;
+    int minim_prev_and_post_images  = 0;
 
-
-    if (semidense_mapper-> frames_previous_keyframe_processed < 5 || (semidense_mapper-> num_cameras_mapping - semidense_mapper-> frames_previous_keyframe_processed) < 5)
-    { minim_prev_and_post_images  = 0;}
 
     if (semidense_mapper -> num_keyframes < semidense_mapper->init_keyframes +1)
     {
@@ -1678,12 +1668,9 @@ void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
             int leave_loop = 0;
 
             float max_convergence_ratio = 0;
-            float cameras_consistency_minim = 0;
-
-            int limit = sorted_inv_depths.rows;
 
 
-            for (int minim_triangulations = minim_images; minim_triangulations <= limit; minim_triangulations = minim_triangulations +1)
+            for (int minim_triangulations = minim_images; minim_triangulations <= sorted_inv_depths.rows; minim_triangulations = minim_triangulations +1)
             {
 
                 for (int l = 0; l < sorted_inv_depths.rows-minim_triangulations;l++)
@@ -1704,7 +1691,6 @@ void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
                             if ((sum_prev_nex_frs>minim_prev_and_post_images-1 && sum_prev_nex_frs < minim_triangulations+1-minim_prev_and_post_images )||  semidense_mapper->num_keyframes <= semidense_mapper-> init_keyframes)
                             {
                                 final_variances.at<float>(i,0) = cameras_consistency;
-                                cameras_consistency_minim = sorted_inv_depths.at<float>(l+(minim_triangulations-1),0) / sorted_inv_depths.at<float>(l,0);
                                 be_outlier.at<float>(i,0) = 0;
 
                                 if (fabs(sorted_inv_depths.at<float>(l+(minim_triangulations-1),0) - sorted_inv_depths.at<float>(l,0))  / cameras_consistency < inv_depth_disparity_print_th && minim_triangulations > 5)
