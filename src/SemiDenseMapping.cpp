@@ -605,7 +605,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
 					cont_depths = 0;
 
-					// INLIER KILLING
+					// Outlier Rejection based on Temporal Consistency
 					//
 
 					for (cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
