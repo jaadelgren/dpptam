@@ -583,12 +583,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
 								}
 							}
-
-							if ( semidense_mapper -> num_keyframes > semidense_mapper -> init_keyframes
-									&& (depth_map_points_tracked.at<float>(i,j)) < 0 )
-							{
-							   depths2regularize.at<float>(i,j)=  1/depth_map_points_tracked.at<float>(i,j);
-							}
 						}
 					}
 
