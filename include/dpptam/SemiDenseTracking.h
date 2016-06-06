@@ -179,7 +179,7 @@ class SemiDenseTracking  :public Imagenes {
 
     double overlap_tracking;
 
-    int create_inv_depth_discretization, last_frame_tracked;
+    int last_frame_tracked;
     double tracking_th;
 
     int iter_th;

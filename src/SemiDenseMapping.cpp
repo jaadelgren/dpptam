@@ -87,6 +87,8 @@ SemiDenseMapping::SemiDenseMapping():do_initialization(1),do_optimization(0), do
 
     init_keyframes = 12;
 
+    mean_value = 1;
+
     fs2.release();
 }
 
