@@ -93,7 +93,6 @@ SemiDenseTracking::SemiDenseTracking()
    processed_frames = 0;
    processed_frames_since_keyframe = 0;
 
-   create_inv_depth_discretization = 0;
 
 
    boost::filesystem::remove_all((ros::package::getPath("dpptam")+"/src/map_and_poses").c_str());
@@ -479,18 +478,6 @@ void semidense_tracking(Imagenes *images,SemiDenseMapping *semidense_mapper,\
                  print_evaluation(semidense_tracker->evaluation,buffer_evaluation);
              }*/
 
-             if (semidense_tracker->create_inv_depth_discretization < 0.5)
-             {
-                 float depth_step=0;
-                 float mean_value;
-                 cv::Mat depth_map,variance_points_tracked;
-
-                 semidense_tracker->create_inv_depth_discretization=1;
-                 semidense_mapper->points_last_keyframe.convertTo(semidense_mapper->points_last_keyframe, CV_32FC1);
-                 get_inverse_depth(*images,semidense_mapper->points_last_keyframe,semidense_mapper->inv_depths,depth_step,0,semidense_tracker->discretization,mean_value,depth_map,1,variance_points_tracked);
-                 semidense_mapper->points_last_keyframe.convertTo(semidense_mapper->points_last_keyframe, CV_64FC1);
-                 semidense_tracker->mean_depth_value=mean_value;
-             }
 
              semidense_tracker->last_frame_tracked = semidense_tracker->image_n;
 
