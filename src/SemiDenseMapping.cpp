@@ -742,280 +742,283 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
                     for (int l = 0;l<2;l++)
                     {
-                           cv::Mat seed_points_to_print;
-                           cv::Mat initial_inv_depth1 = semidense_mapper-> initial_inv_depth_sd.clone();
+            			cv::Mat seed_points_to_print;
+            			cv::Mat initial_inv_depth1 = semidense_mapper-> initial_inv_depth_sd.clone();
 
-                           if (l>0)
-                           {
-                                semidense_mapper-> image_points_byFocal_sd.copyTo(seed_points_to_print);
+            			if (l == 0)
+            			{
+            				//// [4-2] First run: get "pixel_taken", "pixels_taken_print", "scale"
+            				//
+            			   for (int i= 0; i<semidense_mapper->points_ref_im_sd.rows;i++)
+            			   {
+            					float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
+            					float n_y_ref = semidense_mapper->points_ref_im_sd.at<float>(i,0);
 
-                                seed_points_to_print.colRange(0,1).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(0,1).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
-                                seed_points_to_print.colRange(1,2).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(1,2).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
-                                seed_points_to_print.colRange(2,3).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(2,3).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
+            					if ( deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
+            							be_outlier.at<float>(i,0)<0.5)
+            					{
+            						inliers_matrix.at<float>(n_y_ref,n_x_ref) = 1;
+            					}
 
-                                seed_points_to_print = seed_points_to_print.t();
-                                seed_points_to_print = images.Im[reference_image]->R.t() * (seed_points_to_print - semidense_mapper-> t_r_ref);
+            					if (deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th
+            						&& be_outlier_print.at<float>(i,0)<0.5 )
+            					{
+            						init_inv_dephts_maps_scale[1].at<float>(static_cast<int>(n_y_ref),static_cast<int>(n_x_ref))=1/fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0));
+            					}
+            			   }
 
-                                seed_points_to_print = seed_points_to_print.t();
+            			   if (num_keyframes > semidense_mapper->init_keyframes)
+            			   {
+            					int size_y = init_inv_dephts_maps_scale[0].rows;
+            					int size_x = init_inv_dephts_maps_scale[0].cols;
+            					cv::Mat scales(0,1,CV_32FC1);
+            					for (int ii = 0; ii < size_y;ii++)
+            					{
+            						for (int jj = 0; jj < size_x;jj++)
+            						{
+            							if ( init_inv_dephts_maps_scale[1].at<float>(ii,jj) > 0 && init_inv_dephts_maps_scale[0].at<float>(ii,jj) > 0)
+            							{
+            								float scale_ratio = init_inv_dephts_maps_scale[0].at<float>(ii,jj)  / init_inv_dephts_maps_scale[1].at<float>(ii,jj);
+            								if (fabs(scale_ratio -1 ) < 0.03)
+            								{
+            									scales.push_back(scale_ratio);
+            								}
+            							}
+            						}
+            					}
 
+            					if (scales.rows > 1000)
+            					{
+            						cv::Mat sorted_scales;
+            						cv::sort(cv::abs(scales),sorted_scales,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
+            						scale = 1/sorted_scales.at<float>(round(sorted_scales.rows/2),0);
+            						if (scale > 1.005 || scale < 0.995)
+            						{
+            							scale = 1;
+            						}
+            					}
+            				}
 
-                                if (print_depth_maps > 0.5)
-                                {
-                                    //// ONLY SELECT DEPTHS TO PRINT FOR COLOR RANGE
-                                    cv::Mat depths_to_print(0,1,CV_32FC1);
-                                    for (int i= 0; i<semidense_mapper->points_ref_im_sd.rows;i++)
-                                    {
-                                        if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
-                                                 be_outlier.at<float>(i,0)<0.5  ) )
-                                        {
-                                           depths_to_print.push_back(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0));
-                                        }
-                                    }
-                                    cv::Mat sorted_inv_depths;
-                                    cv::sort(cv::abs(depths_to_print),sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
-                                    min_depth = abs(sorted_inv_depths.at<float>(round(sorted_inv_depths.rows/3)));
-                                    max_depth = abs(sorted_inv_depths.at<float>(round(2*sorted_inv_depths.rows/3)));
-                                    min_depth_real = abs(sorted_inv_depths.at<float>(round(1*sorted_inv_depths.rows/10),0) );
-                                    max_depth_real = abs(sorted_inv_depths.at<float>(round(10*sorted_inv_depths.rows/10-1),0));
-                                    //// ONLY SELECT DEPTHS TO PRINT FOR COLOR RANGE
-                                    ///
-                                }
-                           }
+            				pixel_taken = inliers_matrix.clone();
+            				pixel_taken_print = inliers_matrix.clone();
 
-                            for (int i= 0; i<semidense_mapper->points_ref_im_sd.rows;i++)
-                            {
-                                if (l > 0)
-                                {
-                                    float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
-                                    float n_y_ref =semidense_mapper->points_ref_im_sd.at<float>(i,0);
+            			}
+            			else
+            			{
+            				//// [4-3] Second run:
+            				//
+            				semidense_mapper-> image_points_byFocal_sd.copyTo(seed_points_to_print);
 
-                                    int count_inlier_neighbours = 0;
+            				seed_points_to_print.colRange(0,1).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(0,1).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
+            				seed_points_to_print.colRange(1,2).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(1,2).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
+            				seed_points_to_print.colRange(2,3).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) = semidense_mapper-> image_points_byFocal_sd.colRange(2,3).rowRange(0,semidense_mapper-> image_points_byFocal_sd.rows) / (initial_inv_depth1*scale);
 
-                                    if (n_y_ref > 1 && n_y_ref < image_i.rows-2 && n_x_ref > 1 && n_x_ref < image_i.cols-2  )
-                                    {
-                                        for (int n_x_ref_aux = n_x_ref-1; n_x_ref_aux <= n_x_ref+1; n_x_ref_aux++)
-                                        {
-                                            for (int n_y_ref_aux = n_y_ref-1; n_y_ref_aux <= n_y_ref+1; n_y_ref_aux++)
-                                            {
-                                                if (inliers_matrix.at<float>(n_y_ref_aux,n_x_ref_aux) > 0.5 || G_expanded.at<float>(n_y_ref_aux,n_x_ref_aux) > 5)
-                                                {
-                                                    count_inlier_neighbours++;
-                                                }
-                                            }
-                                        }
-                                    }
+            				seed_points_to_print = seed_points_to_print.t();
+            				seed_points_to_print = images.Im[reference_image]->R.t() * (seed_points_to_print - semidense_mapper-> t_r_ref);
 
-                                    point_to_camera = 100000;
-
-                                    if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
-                                             be_outlier.at<float>(i,0)<0.5 && count_inlier_neighbours > 3  ))
-                                    {
-
-                                        cv::Mat points_aux(1,7,CV_32FC1);
-                                        points_aux.at<float>(0,0) = seed_points_to_print.at<float>(i,0);
-                                        points_aux.at<float>(0,1) = seed_points_to_print.at<float>(i,1);
-                                        points_aux.at<float>(0,2) = seed_points_to_print.at<float>(i,2);
-
-                                        point_to_camera = (fabs(C1.at<double>(0,0) - seed_points_to_print.at<float>(i,0)) + fabs(C1.at<double>(1,0) - seed_points_to_print.at<float>(i,1)) + \
-                                                              fabs(C1.at<double>(2,0) - seed_points_to_print.at<float>(i,2)) );
-
-
-                                        float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
-                                        float n_y_ref = semidense_mapper->points_ref_im_sd.at<float>(i,0);
-
-                                        float n_y_ref_aux = n_y_ref;
-                                        float n_x_ref_aux = n_x_ref;
+            				seed_points_to_print = seed_points_to_print.t();
 
 
-                                        if (print_depth_maps > 0.5)
-                                        {
-                                            channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
-                                            channel_r.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
-                                            channel_g.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
-                                            if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
-                                            {
-                                                channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux)  = 0;
-                                            }
-                                        }
+            				if (print_depth_maps > 0.5)
+            				{
+            					//// ONLY SELECT DEPTHS TO PRINT FOR COLOR RANGE
+            					cv::Mat depths_to_print(0,1,CV_32FC1);
+            					for (int i= 0; i<semidense_mapper->points_ref_im_sd.rows;i++)
+            					{
+            						if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
+            								 be_outlier.at<float>(i,0)<0.5  ) )
+            						{
+            						   depths_to_print.push_back(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0));
+            						}
+            					}
+            					cv::Mat sorted_inv_depths;
+            					cv::sort(cv::abs(depths_to_print),sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
+            					min_depth = abs(sorted_inv_depths.at<float>(round(sorted_inv_depths.rows/3)));
+            					max_depth = abs(sorted_inv_depths.at<float>(round(2*sorted_inv_depths.rows/3)));
+            					min_depth_real = abs(sorted_inv_depths.at<float>(round(1*sorted_inv_depths.rows/10),0) );
+            					max_depth_real = abs(sorted_inv_depths.at<float>(round(10*sorted_inv_depths.rows/10-1),0));
+            					//// ONLY SELECT DEPTHS TO PRINT FOR COLOR RANGE
+            					///
+            				}
+
+            				for (int i= 0; i<semidense_mapper->points_ref_im_sd.rows;i++)
+            				{
+            					float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
+            					float n_y_ref =semidense_mapper->points_ref_im_sd.at<float>(i,0);
+
+            					int count_inlier_neighbours = 0;
+
+            					if (n_y_ref > 1 && n_y_ref < image_i.rows-2 && n_x_ref > 1 && n_x_ref < image_i.cols-2  )
+            					{
+            						for (int n_x_ref_aux = n_x_ref-1; n_x_ref_aux <= n_x_ref+1; n_x_ref_aux++)
+            						{
+            							for (int n_y_ref_aux = n_y_ref-1; n_y_ref_aux <= n_y_ref+1; n_y_ref_aux++)
+            							{
+            								if (inliers_matrix.at<float>(n_y_ref_aux,n_x_ref_aux) > 0.5 || G_expanded.at<float>(n_y_ref_aux,n_x_ref_aux) > 5)
+            								{
+            									count_inlier_neighbours++;
+            								}
+            							}
+            						}
+            					}
 
 
-                                        int color1 = gray_image.at<float>(n_y_ref,n_x_ref);
-                                        int color2 = gray_image.at<float>(n_y_ref,n_x_ref);
-                                        int color3 = gray_image.at<float>(n_y_ref,n_x_ref);
+            					if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
+            							 be_outlier.at<float>(i,0)<0.5 && count_inlier_neighbours > 3  ))
+            					{
 
-                                        points_aux.at<float>(0,3) = color1;
-                                        points_aux.at<float>(0,4) = color2;
-                                        points_aux.at<float>(0,5) = color3;
+            						semidense_mapper -> G_expanded.at<float>(round(n_y_ref),round(n_x_ref)) = 10;
 
+            						//// Get XYZ position & graycolor data & inv_depth_variance of points_aux
+            						//
 
-                                        points_aux.at<float>(0,6) = final_variances.at<float>(i,0);
+            						cv::Mat points_aux(1,7,CV_32FC1);
+            						points_aux.at<float>(0,0) = seed_points_to_print.at<float>(i,0);
+            						points_aux.at<float>(0,1) = seed_points_to_print.at<float>(i,1);
+            						points_aux.at<float>(0,2) = seed_points_to_print.at<float>(i,2);
 
-
-
-                                        if (pixel_taken .at<float>(n_y_ref,n_x_ref) < 1.5)
-                                        {
-                                            points_aux2.push_back(points_aux);
-                                            pixel_taken.at<float>(n_y_ref,n_x_ref) = 2;
-                                        }
-                                        semidense_mapper -> G_expanded.at<float>(round(n_y_ref),round(n_x_ref)) = 10;
+            						point_to_camera = (fabs(C1.at<double>(0,0) - seed_points_to_print.at<float>(i,0))
+            											+ fabs(C1.at<double>(1,0) - seed_points_to_print.at<float>(i,1))
+            											+ fabs(C1.at<double>(2,0) - seed_points_to_print.at<float>(i,2)) );
 
 
-                                        number_of_points_estimated++;
-
-                                        if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th  && \
-                                               be_outlier_print.at<float>(i,0)<0.5  )
-                                                && camera_translation / point_to_camera > semidense_mapper-> translational_ratio_th_min *0.6)
-                                        {
-                                            int color1 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[2];
-                                            int color2 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[1] ;
-                                            int color3 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[0];
-
-                                            points_aux.at<float>(0,3) = color1;
-                                            points_aux.at<float>(0,4) = color2;
-                                            points_aux.at<float>(0,5) = color3;
-
-                                            semidense_mapper->map_points.push_back(points_aux);
-                                            semidense_mapper->local_map_points.push_back(points_aux);
-
-                                            if (pixel_taken_print.at<float>(n_y_ref,n_x_ref) < 1.5)
-                                            {
-                                                points_aux2_print.push_back(points_aux);
-                                                pixel_taken_print.at<float>(n_y_ref,n_x_ref) = 2;
-                                            }
-                                        }
+            						if (print_depth_maps > 0.5)
+            						{
+            							channel_b.at<unsigned char>(n_y_ref,n_x_ref) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
+            							channel_r.at<unsigned char>(n_y_ref,n_x_ref) = 0;
+            							channel_g.at<unsigned char>(n_y_ref,n_x_ref) = 0;
+            							if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
+            							{
+            								channel_b.at<unsigned char>(n_y_ref,n_x_ref)  = 0;
+            							}
+            						}
 
 
+            						int color1 = gray_image.at<float>(n_y_ref,n_x_ref);
+            						int color2 = gray_image.at<float>(n_y_ref,n_x_ref);
+            						int color3 = gray_image.at<float>(n_y_ref,n_x_ref);
 
-                                        for (int n_x_ref_aux = n_x_ref-1; n_x_ref_aux<=n_x_ref+1;n_x_ref_aux++)
-                                        {
-                                            for (int n_y_ref_aux = n_y_ref-1; n_y_ref_aux<=n_y_ref+1;n_y_ref_aux++)
-                                            {
-                                                if (pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux)<0.5)
-                                                {
+            						points_aux.at<float>(0,3) = color1;
+            						points_aux.at<float>(0,4) = color2;
+            						points_aux.at<float>(0,5) = color3;
 
-                                                    if ( semidense_mapper -> G_expanded.at<float>(round(n_y_ref_aux),round(n_x_ref_aux)) <5)
-                                                    {
-                                                        int color1 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
-                                                        int color2 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
-                                                        int color3 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
 
-                                                        points_aux.at<float>(0,3) = color1;
-                                                        points_aux.at<float>(0,4) = color2;
-                                                        points_aux.at<float>(0,5) = color3;
+            						points_aux.at<float>(0,6) = final_variances.at<float>(i,0);
 
-                                                        if (print_depth_maps > 0.5)
-                                                        {
 
-                                                            channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
-                                                            channel_r.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
-                                                            channel_g.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
+            						//// Push back to points_aux2 ONLY IF the corresponding pixel is not taken yet !
+            						//
 
-                                                            if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
-                                                            {
-                                                              channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux)  = 0;
-                                                            }
-                                                        }
-
-                                                        cv::Mat point_i_sd(1,3, CV_32FC1);
-                                                        point_i_sd.at<float>(0,0) = ((images.Im[reference_image]->cx-n_x_ref_aux)/images.Im[reference_image]->fx)/(initial_inv_depth1.at<float>(i,0)*scale);
-                                                        point_i_sd.at<float>(0,1) = ((n_y_ref_aux-images.Im[reference_image]->cy)/images.Im[reference_image]->fy)/(initial_inv_depth1.at<float>(i,0)*scale);
-                                                        point_i_sd.at<float>(0,2) = 1/ (initial_inv_depth1.at<float>(i,0)*scale);
-                                                        point_i_sd = images.Im[reference_image]->R.t() * (point_i_sd.t() - images.Im[reference_image]->t);
-                                                        point_i_sd = point_i_sd.t();
-                                                        points_aux.at<float>(0,0) = point_i_sd.at<float>(0,0);
-                                                        points_aux.at<float>(0,1) = point_i_sd.at<float>(0,1);
-                                                        points_aux.at<float>(0,2) = point_i_sd.at<float>(0,2);
-
-                                                        points_aux2.push_back(points_aux);
-                                                        pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;
-                                                    }
+            						if (pixel_taken .at<float>(n_y_ref,n_x_ref) < 1.5)
+            						{
+            							points_aux2.push_back(points_aux);
+            							pixel_taken.at<float>(n_y_ref,n_x_ref) = 2;
+            						}
 
 
 
-                                                    if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th  && \
-                                                           be_outlier_print.at<float>(i,0)<0.5 && count_inlier_neighbours > 3  )
-                                                            && camera_translation / point_to_camera > semidense_mapper-> translational_ratio_th_min*0.6 && pixel_taken_print.at<float>(n_y_ref_aux,n_x_ref_aux)<0.5)
+            						//// Push back to points_aux2 ONLY IF it passes stricter condition
+            						//
 
-                                                    {
-                                                        int color1 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[2];
-                                                        int color2 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[1] ;
-                                                        int color3 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[0];
+            						if ((deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th  && \
+            							   be_outlier_print.at<float>(i,0)<0.5  )
+            								&& camera_translation / point_to_camera > semidense_mapper-> translational_ratio_th_min *0.6)
+            						{
+            							int color1 = image_i.at<cv::Vec3b>(n_y_ref,n_x_ref)[2];
+            							int color2 = image_i.at<cv::Vec3b>(n_y_ref,n_x_ref)[1] ;
+            							int color3 = image_i.at<cv::Vec3b>(n_y_ref,n_x_ref)[0];
 
-                                                        points_aux.at<float>(0,3) = color1;
-                                                        points_aux.at<float>(0,4) = color2;
-                                                        points_aux.at<float>(0,5) = color3;
+            							points_aux.at<float>(0,3) = color1;
+            							points_aux.at<float>(0,4) = color2;
+            							points_aux.at<float>(0,5) = color3;
 
-                                                        semidense_mapper->map_points.push_back(points_aux);
-                                                        semidense_mapper->local_map_points.push_back(points_aux);
-                                                        if (pixel_taken_print.at<float>(n_y_ref_aux,n_x_ref_aux) < 0.5)
-                                                        {points_aux2_print.push_back(points_aux);
-                                                        pixel_taken_print.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;}
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+            							points_aux2_print.push_back(points_aux);
+            							pixel_taken_print.at<float>(n_y_ref,n_x_ref) = 2;
 
 
-
-                                } // if l > 0
-                                else
-                                {
-                                    float n_x_ref = semidense_mapper->points_ref_im_sd.at<float>(i,1);
-                                    float n_y_ref = semidense_mapper->points_ref_im_sd.at<float>(i,0);
-                                    if ( deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_th  && \
-                                         be_outlier.at<float>(i,0)<0.5)
-                                    {
-                                        inliers_matrix.at<float>(n_y_ref,n_x_ref) = 1;
-                                    }
-
-                                    if (deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th  && \
-                                           be_outlier_print.at<float>(i,0)<0.5 )
-                                    {
-                                        init_inv_dephts_maps_scale[1].at<float>(static_cast<int>(n_y_ref),static_cast<int>(n_x_ref))=1/fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0));
-                                    }
-
-                                }
-                        } // for i
-                        pixel_taken = inliers_matrix.clone();
-                        pixel_taken_print = inliers_matrix.clone();
-
-                        if (num_keyframes > semidense_mapper->init_keyframes)
-                        {
-                            int size_y = init_inv_dephts_maps_scale[0].rows;
-                            int size_x = init_inv_dephts_maps_scale[0].cols;
-                            cv::Mat scales(0,1,CV_32FC1);
-                            for (int ii = 0; ii < size_y;ii++)
-                            {
-                                for (int jj = 0; jj < size_x;jj++)
-                                {
-                                    if ( init_inv_dephts_maps_scale[1].at<float>(ii,jj) > 0 && init_inv_dephts_maps_scale[0].at<float>(ii,jj) > 0)
-                                    {
-                                        float scale_ratio = init_inv_dephts_maps_scale[0].at<float>(ii,jj)  / init_inv_dephts_maps_scale[1].at<float>(ii,jj);
-                                        if (fabs(scale_ratio -1 ) < 0.03)
-                                        {scales.push_back(scale_ratio);}
-                                    }
-                                }
-                            }
-                            if (l==0)
-                            {
-                                if (scales.rows > 1000)
-                                {
-                                    cv::Mat sorted_scales;
-                                    cv::sort(cv::abs(scales),sorted_scales,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
-                                    scale = 1/sorted_scales.at<float>(round(sorted_scales.rows/2),0);
-                                    if (scale > 1.005 || scale < 0.995)
-                                    {
-                                        scale = 1;
-                                    }
-
-                                }
-
-                            }
-                        }
-                    } // l
+            						}
 
 
+            						//// NEIGHBOR RESCUE OPERATION !!!
+            						//
+            						for (int n_x_ref_aux = n_x_ref-1; n_x_ref_aux<=n_x_ref+1;n_x_ref_aux++)
+            						{
+            							for (int n_y_ref_aux = n_y_ref-1; n_y_ref_aux<=n_y_ref+1;n_y_ref_aux++)
+            							{
+            								if (pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux)<0.5)
+            								{
+            									//// (a) Neighbor Rescue operation for points_aux2
+            									//
+            									if (semidense_mapper -> calculate_superpixels > 0) // because this operation is not so necessary
+            																					   // if we only do semidense VO
+            									{
+													int color1 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+													int color2 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+													int color3 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+
+													points_aux.at<float>(0,3) = color1;
+													points_aux.at<float>(0,4) = color2;
+													points_aux.at<float>(0,5) = color3;
+
+
+													if (print_depth_maps > 0.5)
+													{
+
+														channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
+														channel_r.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
+														channel_g.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
+
+														if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
+														{
+														  channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux)  = 0;
+														}
+													}
+
+													cv::Mat point_i_sd(1,3, CV_32FC1);
+													point_i_sd.at<float>(0,0) = ((images.Im[reference_image]->cx-n_x_ref_aux)/images.Im[reference_image]->fx)/(initial_inv_depth1.at<float>(i,0)*scale);
+													point_i_sd.at<float>(0,1) = ((n_y_ref_aux-images.Im[reference_image]->cy)/images.Im[reference_image]->fy)/(initial_inv_depth1.at<float>(i,0)*scale);
+													point_i_sd.at<float>(0,2) = 1/ (initial_inv_depth1.at<float>(i,0)*scale);
+													point_i_sd = images.Im[reference_image]->R.t() * (point_i_sd.t() - images.Im[reference_image]->t);
+													point_i_sd = point_i_sd.t();
+													points_aux.at<float>(0,0) = point_i_sd.at<float>(0,0);
+													points_aux.at<float>(0,1) = point_i_sd.at<float>(0,1);
+													points_aux.at<float>(0,2) = point_i_sd.at<float>(0,2);
+
+													points_aux2.push_back(points_aux);
+													pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;
+
+            									}
+
+            									//// (b) Neighbor Rescue operation for points_aux2_print
+            									//
+            									if (   deviation_inv_depth.at<float>(i,0) > deviation_inv_depth_print_th
+            										&& be_outlier_print.at<float>(i,0)<0.5 && count_inlier_neighbours > 3
+            										&& camera_translation / point_to_camera > semidense_mapper-> translational_ratio_th_min*0.6
+            										&& pixel_taken_print.at<float>(n_y_ref_aux,n_x_ref_aux)<0.5  )
+            									{
+            										int color1 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[2];
+            										int color2 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[1] ;
+            										int color3 = image_i.at<cv::Vec3b>(n_y_ref_aux,n_x_ref_aux)[0];
+
+            										points_aux.at<float>(0,3) = color1;
+            										points_aux.at<float>(0,4) = color2;
+            										points_aux.at<float>(0,5) = color3;
+
+
+            										points_aux2_print.push_back(points_aux);
+            										pixel_taken_print.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;
+
+            									}
+            								}
+            							}
+            						}
+            					}
+            				}
+            			}
+            		} // l
+
+            		semidense_mapper -> local_map_points = points_aux2_print.clone();
+            		semidense_mapper -> points3D_toprint[num_keyframes]=points_aux2_print.clone();
 
                     int counterdepths2 = 0;
 
@@ -1783,8 +1786,6 @@ void join_last_images(Imagenes *images,Imagenes *images_previous_keyframe,\
     int pos_map = (semidense_mapper->num_keyframes) - dense_mapper->points3D4spx.size() * c;
 
     dense_mapper->points3D4spx[pos_map]=semidense_mapper->local_map_points.clone();
-    cv::Mat local_map_points_init(0,6,CV_64FC1);
-    semidense_mapper->local_map_points = local_map_points_init.clone();
 
     copy_imagenes_dense(*images,*dense_mapper);
     filter_imagenes(*dense_mapper,4);
