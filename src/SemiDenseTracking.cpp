@@ -487,7 +487,6 @@ void semidense_tracking(Imagenes *images,SemiDenseMapping *semidense_mapper,\
              semidense_tracker->processed_frames_since_keyframe++;
 
              semidense_mapper->last_frame_tracked = semidense_tracker->last_frame_tracked;
-             semidense_mapper->images_size = images->getNumberOfImages();
           }
     } // if cont_frames >
 }
