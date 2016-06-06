@@ -67,8 +67,8 @@ SemiDenseMapping::SemiDenseMapping():do_initialization(1),do_optimization(0), do
 
     int discretization = (int)fs2["discretization"];
 
-	X.computeError();
-	X_gradient_Magnitude.computeError();
+    calculate_superpixels = (int)fs2["calculate_superpixels"];
+
 	X_gx_ex.computeError();
 	X_gy_ey.computeError();
 
