@@ -1701,6 +1701,8 @@ void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
 								final_variances.at<float>(i,0) = cameras_consistency;
 								be_outlier.at<float>(i,0) = 0;
 
+								semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.rowRange(l,l+minim_triangulations).at<float>(sorted_inv_depths.rowRange(l,l+minim_triangulations).rows/2,0);
+
 								if (inv_depth_diff_by_var < inv_depth_disparity_print_th // inv_depth_disparity_print_th = 1.0
 									&& minim_triangulations > 5)
 								{
@@ -1708,7 +1710,6 @@ void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
 									leave_loop = 1;
 								}
 
-								semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.rowRange(l,l+minim_triangulations).at<float>(sorted_inv_depths.rowRange(l,l+minim_triangulations).rows/2,0);
 							}
 						}
 
