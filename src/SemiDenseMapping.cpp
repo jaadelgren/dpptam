@@ -491,8 +491,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
                     cv::Mat deviation_inv_depth(semidense_mapper-> initial_inv_depth_sd.rows,1,CV_32FC1);
 
-                    semidense_mapper->X_gx_ex.ph_error[0] = semidense_mapper->X_gx_ex.ph_error[0]/semidense_mapper->num_cameras_mapping;
-					semidense_mapper->X_gy_ey.ph_error[0] = semidense_mapper->X_gy_ey.ph_error[0]/semidense_mapper->num_cameras_mapping;
 
 
                     cv::Mat gray_image = images.Im[reference_image]->image_gray.clone();
@@ -1610,117 +1608,130 @@ void get_photometric_errors_matrix_sd_exhaustive(Imagenes  &images,  cv::Mat &in
 void   convergence_test(SemiDenseMapping *semidense_mapper,cv::Mat &be_outlier,
                         cv::Mat &be_outlier_print,cv::Mat &deviation_inv_depth,cv::Mat &final_variances, float inv_depth_disparity_th,float inv_depth_disparity_print_th)
 {
-    float counter_converged_points = 0;
+	    int minim_images  = 4;
+	    int minim_prev_and_post_images  = 0;
 
-    int minim_images  = 4;
-    int minim_prev_and_post_images  = 0;
-
-
-    if (semidense_mapper -> num_keyframes < semidense_mapper->init_keyframes +1)
-    {
-        minim_prev_and_post_images  = 2;
-    }
+	    if (semidense_mapper -> num_keyframes < semidense_mapper->init_keyframes +1)
+	    {
+	        minim_prev_and_post_images  = 2;
+	    }
 
 
-    float max_convergence_ratio_total = 0;
-    float total_points = 0;
+	    #pragma omp parallel for num_threads(2)
+	    for (int i=0; i<semidense_mapper-> initial_inv_depth_sd.rows; i++)
+	    {
+	        // Remember sdm->init_inv_depth_largeParallax[i].rows = # inv_depth_opt histories for points_i_sd[i]:
+	        if (semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i].rows >= minim_images )
+	        {
+	        	//// [1] "deviation_inv_depth" calculation
+	        	//
+
+	            deviation_inv_depth.at<float>(i,0) = (semidense_mapper->X_gy_ey.ph_error[0].at<float>(i,0)
+	                                                  +semidense_mapper->X_gx_ex.ph_error[0].at<float>(i,0))
+													  / semidense_mapper->num_cameras_mapping;
+
+	            //// [2] Truncate the first two histories (introducing the "forgetting factor")
+	            //
+
+	        	if (semidense_mapper -> num_keyframes > semidense_mapper->init_keyframes)
+	        	{
+					semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i] = semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i].rowRange(2, semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i].rows);
+					semidense_mapper -> previous_or_next_frame[i] = semidense_mapper -> previous_or_next_frame[i].rowRange(2, semidense_mapper -> previous_or_next_frame[i].rows);
+					semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i] = semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].rowRange(2, semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].rows);
+	        	}
+
+	        	//// [3] Sort inv_depths & variables pertaining to it.
+	        	//
+
+	            cv::Mat sorted_inv_depths;
+	            cv::sort(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
+
+	            cv::Mat sorted_index ;
+	            cv::sortIdx(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_index,CV_SORT_EVERY_COLUMN +CV_SORT_ASCENDING);
+
+	            cv::Mat sorted_previous_or_next_frame = semidense_mapper -> previous_or_next_frame[i].clone();
+	            cv::Mat sorted_variances = semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].clone();
+
+	            for (int l = 0; l < semidense_mapper -> previous_or_next_frame[i].rows; l++)
+	            {
+	                sorted_previous_or_next_frame.at<float>(l,0) = semidense_mapper -> previous_or_next_frame[i].at<float>(sorted_index.at<int>(l,0),0);
+	                sorted_variances.at<float>(l,0) = semidense_mapper ->  initial_inv_depth_inEveryCamera_uncertainty[i].at<float>(sorted_index.at<int>(l,0),0);
+	            }
 
 
-    #pragma omp parallel for num_threads(2)
-    for (int i=0; i<semidense_mapper-> initial_inv_depth_sd.rows; i++)
-    {
+	            //// [4] Actual convergence test
+	            //
 
-        if (semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i].rows >= minim_images && semidense_mapper -> num_keyframes > semidense_mapper->init_keyframes)
-        {
-            semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i] = semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i].rowRange(2, semidense_mapper -> initial_inv_depth_inEveryCamera_largeParallax[i].rows);
-            semidense_mapper -> previous_or_next_frame[i] = semidense_mapper -> previous_or_next_frame[i].rowRange(2, semidense_mapper -> previous_or_next_frame[i].rows);
-            semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i] = semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].rowRange(2, semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].rows);
-        }
+	            // Equate the "initial_inv_depth_sd" to median of inv_depth histories !!
+	            semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.at<float>(sorted_inv_depths.rows/2,0);
 
-        if (semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i].rows >= minim_images )
-        {
-            cv::Mat sorted_inv_depths;
-            cv::sort(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
-
-            cv::Mat sorted_index ;
-            cv::sortIdx(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_index,CV_SORT_EVERY_COLUMN +CV_SORT_ASCENDING);
-
-            cv::Mat sorted_previous_or_next_frame = semidense_mapper -> previous_or_next_frame[i].clone();
-            cv::Mat sorted_variances = semidense_mapper -> initial_inv_depth_inEveryCamera_uncertainty[i].clone();
-
-            for (int l = 0; l < sorted_previous_or_next_frame.rows; l++)
-            {
-                sorted_previous_or_next_frame.at<float>(l,0) = semidense_mapper -> previous_or_next_frame[i].at<float>(sorted_index.at<int>(l,0),0);
-                sorted_variances.at<float>(l,0) = semidense_mapper ->  initial_inv_depth_inEveryCamera_uncertainty[i].at<float>(sorted_index.at<int>(l,0),0);
-            }
+	            // Consider all points as outliers
+	            be_outlier.at<float>(i,0) = 1;
+	            be_outlier_print.at<float>(i,0) = 1;
 
 
-            deviation_inv_depth.at<float>(i,0) = (semidense_mapper->X_gy_ey.ph_error[0].at<float>(i,0)  +\
-                                                semidense_mapper->X_gx_ex.ph_error[0].at<float>(i,0));
+	            int leave_loop = 0;
 
-            semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.at<float>(sorted_inv_depths.rows/2,0);
+	            for (int minim_triangulations = minim_images; minim_triangulations <= sorted_inv_depths.rows; minim_triangulations++)
+				{
+	            	if (leave_loop == 1)
+	            		break;
 
-            be_outlier.at<float>(i,0) = 1;
-            be_outlier_print.at<float>(i,0) = 1;
-            int leave_loop = 0;
+					for (int l = 0; l < sorted_inv_depths.rows-minim_triangulations;l++)
+					{
+						if (leave_loop == 1)
+							break;
 
-            float max_convergence_ratio = 0;
+						int sum_prev_nex_frs = 0;
+						for (int ll = l; ll<l+minim_triangulations;ll++)
+						{
+						   sum_prev_nex_frs+= sorted_previous_or_next_frame.at<int>(ll,0);
+						}
 
-
-            for (int minim_triangulations = minim_images; minim_triangulations <= sorted_inv_depths.rows; minim_triangulations = minim_triangulations +1)
-            {
-
-                for (int l = 0; l < sorted_inv_depths.rows-minim_triangulations;l++)
-                {
-                    if (leave_loop < 1)
-                    {
-                        int sum_prev_nex_frs = 0;
-                        for (int ll = l; ll<l+minim_triangulations;ll++)
-                        {
-                            sum_prev_nex_frs+= sorted_previous_or_next_frame.at<int>(ll,0);
-                        }
-
-                        float cameras_consistency = fabs(mean(sorted_variances.rowRange(l,l+minim_triangulations))[0]);
+						float cameras_consistency = fabs(mean(sorted_variances.rowRange(l,l+minim_triangulations))[0]);
 
 
-                        if ( fabs(sorted_inv_depths.at<float>(l+(minim_triangulations-1),0) - sorted_inv_depths.at<float>(l,0))  / cameras_consistency < inv_depth_disparity_th)
-                        {
-                            if ((sum_prev_nex_frs>minim_prev_and_post_images-1 && sum_prev_nex_frs < minim_triangulations+1-minim_prev_and_post_images )||  semidense_mapper->num_keyframes <= semidense_mapper-> init_keyframes)
-                            {
-                                final_variances.at<float>(i,0) = cameras_consistency;
-                                be_outlier.at<float>(i,0) = 0;
+						float inv_depth_diff_by_var = fabs(sorted_inv_depths.at<float>(l+(minim_triangulations-1),0) - sorted_inv_depths.at<float>(l,0)) / cameras_consistency;
 
-                                if (fabs(sorted_inv_depths.at<float>(l+(minim_triangulations-1),0) - sorted_inv_depths.at<float>(l,0))  / cameras_consistency < inv_depth_disparity_print_th && minim_triangulations > 5)
-                                {
-                                    be_outlier_print.at<float>(i,0) = 0;
-                                    leave_loop = 1;
-                                }
+						if (  inv_depth_diff_by_var < inv_depth_disparity_th) // inv_depth_disparity_th = 1.9
+						{
+							if (   (sum_prev_nex_frs>minim_prev_and_post_images-1 && sum_prev_nex_frs < minim_triangulations+1-minim_prev_and_post_images )
+								||  semidense_mapper->num_keyframes <= semidense_mapper-> init_keyframes)
+							{
+								final_variances.at<float>(i,0) = cameras_consistency;
+								be_outlier.at<float>(i,0) = 0;
 
-                                semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.rowRange(l,l+minim_triangulations).at<float>(sorted_inv_depths.rowRange(l,l+minim_triangulations).rows/2,0);
-                            }
-                        }
-                    }
-                }
-            }
+								if (inv_depth_diff_by_var < inv_depth_disparity_print_th // inv_depth_disparity_print_th = 1.0
+									&& minim_triangulations > 5)
+								{
+									be_outlier_print.at<float>(i,0) = 0;
+									leave_loop = 1;
+								}
 
-            max_convergence_ratio_total += max_convergence_ratio;
-            total_points++;
-        }
-        else
-        {
-             if (semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i].rows > 1 )
-             {
-                 cv::Mat sorted_inv_depths;
-                 cv::sort(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
-                 semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.at<float>(round(sorted_inv_depths.rows/2),0);
-             }
+								semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.rowRange(l,l+minim_triangulations).at<float>(sorted_inv_depths.rowRange(l,l+minim_triangulations).rows/2,0);
+							}
+						}
 
-            be_outlier.at<float>(i,0) = 1;
-            be_outlier_print.at<float>(i,0) = 1;
-        }
-        if (be_outlier_print.at<float>(i,0) == 0)
-        counter_converged_points++;
-    } // for
+					}
+
+
+				}
+
+	        }
+	        else
+	        {
+	             if (semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i].rows > 1 )
+	             {
+	                 cv::Mat sorted_inv_depths;
+	                 cv::sort(semidense_mapper-> initial_inv_depth_inEveryCamera_largeParallax[i],sorted_inv_depths,CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
+	                 semidense_mapper-> initial_inv_depth_sd.at<float>(i,0) = sorted_inv_depths.at<float>(round(sorted_inv_depths.rows/2),0);
+	             }
+
+	            be_outlier.at<float>(i,0) = 1;
+	            be_outlier_print.at<float>(i,0) = 1;
+	        }
+
+	    } // for
 }
 
 
