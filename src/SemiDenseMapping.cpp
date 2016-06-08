@@ -949,45 +949,43 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
             								{
             									//// (a) Neighbor Rescue operation for points_aux2
             									//
-            									if (semidense_mapper -> calculate_superpixels > 0) // because this operation is not so necessary
-            																					   // if we only do semidense VO
-            									{
-													int color1 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
-													int color2 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
-													int color3 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
 
-													points_aux.at<float>(0,3) = color1;
-													points_aux.at<float>(0,4) = color2;
-													points_aux.at<float>(0,5) = color3;
+												int color1 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+												int color2 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+												int color3 = gray_image.at<float>(n_y_ref_aux,n_x_ref_aux);
+
+												points_aux.at<float>(0,3) = color1;
+												points_aux.at<float>(0,4) = color2;
+												points_aux.at<float>(0,5) = color3;
 
 
-													if (print_depth_maps > 0.5)
+												if (print_depth_maps > 0.5)
+												{
+
+													channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
+													channel_r.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
+													channel_g.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
+
+													if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
 													{
-
-														channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0 + 255*(fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0))-min_depth_real)/(max_depth_real-min_depth_real);
-														channel_r.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
-														channel_g.at<unsigned char>(n_y_ref_aux,n_x_ref_aux) = 0;
-
-														if (fabs(semidense_mapper-> initial_inv_depth_sd.at<float>(i,0)) < min_depth_real)
-														{
-														  channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux)  = 0;
-														}
+													  channel_b.at<unsigned char>(n_y_ref_aux,n_x_ref_aux)  = 0;
 													}
+												}
 
-													cv::Mat point_i_sd(1,3, CV_32FC1);
-													point_i_sd.at<float>(0,0) = ((images.Im[reference_image]->cx-n_x_ref_aux)/images.Im[reference_image]->fx)/(initial_inv_depth1.at<float>(i,0)*scale);
-													point_i_sd.at<float>(0,1) = ((n_y_ref_aux-images.Im[reference_image]->cy)/images.Im[reference_image]->fy)/(initial_inv_depth1.at<float>(i,0)*scale);
-													point_i_sd.at<float>(0,2) = 1/ (initial_inv_depth1.at<float>(i,0)*scale);
-													point_i_sd = images.Im[reference_image]->R.t() * (point_i_sd.t() - images.Im[reference_image]->t);
-													point_i_sd = point_i_sd.t();
-													points_aux.at<float>(0,0) = point_i_sd.at<float>(0,0);
-													points_aux.at<float>(0,1) = point_i_sd.at<float>(0,1);
-													points_aux.at<float>(0,2) = point_i_sd.at<float>(0,2);
+												cv::Mat point_i_sd(1,3, CV_32FC1);
+												point_i_sd.at<float>(0,0) = ((images.Im[reference_image]->cx-n_x_ref_aux)/images.Im[reference_image]->fx)/(initial_inv_depth1.at<float>(i,0)*scale);
+												point_i_sd.at<float>(0,1) = ((n_y_ref_aux-images.Im[reference_image]->cy)/images.Im[reference_image]->fy)/(initial_inv_depth1.at<float>(i,0)*scale);
+												point_i_sd.at<float>(0,2) = 1/ (initial_inv_depth1.at<float>(i,0)*scale);
+												point_i_sd = images.Im[reference_image]->R.t() * (point_i_sd.t() - images.Im[reference_image]->t);
+												point_i_sd = point_i_sd.t();
+												points_aux.at<float>(0,0) = point_i_sd.at<float>(0,0);
+												points_aux.at<float>(0,1) = point_i_sd.at<float>(0,1);
+												points_aux.at<float>(0,2) = point_i_sd.at<float>(0,2);
 
-													points_aux2.push_back(points_aux);
-													pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;
+												points_aux2.push_back(points_aux);
+												pixel_taken.at<float>(n_y_ref_aux,n_x_ref_aux) = 1;
 
-            									}
+
 
             									//// (b) Neighbor Rescue operation for points_aux2_print
             									//
