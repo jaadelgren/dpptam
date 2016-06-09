@@ -761,7 +761,8 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 						}
 
 
-						// Within the selected neighborhood, reject outliers based on temporal consistency
+						// For those points with at least one supporting pixel neighbor,
+						// reject outliers based on temporal consistency
 
 						if (be_outlier.at<float>(cont_depths,0) == 0 || be_outlier_print.at<float>(cont_depths,0) == 0)
 						{
