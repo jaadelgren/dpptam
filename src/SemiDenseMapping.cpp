@@ -597,58 +597,61 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 					semidense_mapper->image_points_byFocal_sd = image_points_byFocal_sd.clone();
 					final_variances = final_variances_aux.clone();
 
-					cont_depths = 0;
+
 
 					// Outlier Rejection based on Temporal Consistency
 					//
 
-					for (cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
+					for (int cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
 					{
-						if (be_outlier.at<float>(cont_depths,0) == 0)
+						// Select the neighbor pixels with non-zero depth & similar pixel intensity
+						// Then compute "min_depth", "max_depth", "mean_depths" within the neighborhood
+
+						int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
+						int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
+
+
+						float max_depth = -INFINITY;
+						float min_depth = +INFINITY;
+						float mean_depths = 0;
+						float cont_depths2reg = 0;
+
+						for (int ii = i-regularization_size; ii < i+regularization_size+1; ii++)
 						{
-							int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
-							int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
-
-
-							float max_depth = -INFINITY;
-							float min_depth = +INFINITY;
-							float mean_depths = 0;
-							float cont_depths2reg = 0;
-
-							for (int ii = i-regularization_size; ii < i+regularization_size+1; ii++)
+							for (int jj = j-regularization_size; jj < j+regularization_size+1; jj++)
 							{
-								for (int jj = j-regularization_size; jj < j+regularization_size+1; jj++)
+								if (   fabs(depths2regularize.at<float>(ii,jj)) > 0
+									&& fabs(gray_image.at<float>(i,j)-gray_image.at<float>(ii,jj)) < 25)
 								{
 
-									if (   fabs(depths2regularize.at<float>(ii,jj)) > 0
-										&& fabs(gray_image.at<float>(i,j)-gray_image.at<float>(ii,jj)) < 25)
+									if (depths2regularize.at<float>(ii,jj) < min_depth)
 									{
-
-										if (depths2regularize.at<float>(ii,jj) < min_depth)
-										{
-											min_depth =  depths2regularize.at<float>(ii,jj);
-										}
-										if (depths2regularize.at<float>(ii,jj) > max_depth)
-										{
-											max_depth =  depths2regularize.at<float>(ii,jj);
-										}
-
-										mean_depths+=depths2regularize.at<float>(ii,jj);
-										cont_depths2reg ++;
-
+										min_depth =  depths2regularize.at<float>(ii,jj);
 									}
+									if (depths2regularize.at<float>(ii,jj) > max_depth)
+									{
+										max_depth =  depths2regularize.at<float>(ii,jj);
+									}
+
+									mean_depths+=depths2regularize.at<float>(ii,jj);
+									cont_depths2reg ++;
+
 								}
 							}
+						}
+
+						if (cont_depths2reg > 0 )
+						{
+							semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0) = mean_depths / cont_depths2reg ;
+						}
 
 
+						// Within the selected neighborhood, reject outliers based on temporal consistency
+
+						if (be_outlier.at<float>(cont_depths,0) == 0 || be_outlier_print.at<float>(cont_depths,0) == 0)
+						{
 							if (cont_depths2reg > 0 )
 							{
-
-								if ( ( max_depth/min_depth) < neighboors_consistency_print)
-								{
-									be_outlier_print.at<float>(cont_depths,0) = 1;
-								}
-
 
 								if (fabs( min_depth-max_depth) /
 									fabs(final_variances.at<float>(cont_depths,0)) >  spatial_threshold )
@@ -657,20 +660,18 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 									be_outlier_print.at<float>(cont_depths,0) = 1;
 								}
 
+								if (  ( max_depth/min_depth) < neighboors_consistency_print )
 								{
-									semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0) = mean_depths / cont_depths2reg ;
+									be_outlier_print.at<float>(cont_depths,0) = 1;
 								}
 
-
-							}
+							} // cont_depths2reg > 2
 							else
 							{
 								be_outlier.at<float>(cont_depths,0) = 1;
 								be_outlier_print.at<float>(cont_depths,0) = 1;
 							}
 						}
-
-
 
 					}
                     ////////////////////////// Median REGULARIZATION////////////////////////////////
