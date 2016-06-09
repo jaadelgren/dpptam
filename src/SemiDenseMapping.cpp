@@ -632,170 +632,163 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                     ///////////////////// Median REGULARIZATION////////////////////////////////////////
                     cv::Mat depths2regularize =  cv::Mat::zeros(images.Im[reference_image]->image.rows,images.Im[reference_image]->image.cols,CV_32FC1);
 
-                    cv::Mat points_ref_im_sd(0,3, CV_32FC1);
-                    cv::Mat be_outlier_aux(0,1, CV_32FC1);
-                    cv::Mat final_variances_aux(0,1, CV_32FC1);
-                    cv::Mat be_outlier_print_aux(0,1, CV_32FC1);
-                    cv::Mat initial_inv_depth_sd(0,1, CV_32FC1);
-                    cv::Mat deviation_inv_depth_aux(0,1, CV_32FC1);
-                    cv::Mat image_points_byFocal_sd(0,3, CV_32FC1);
-                    cv::Mat point_i_sd(1,3, CV_32FC1);
-                    cv::Mat point_ref_im_sd(1,3, CV_32FC1);
+					cv::Mat points_ref_im_sd(0,3, CV_32FC1);
+					cv::Mat be_outlier_aux(0,1, CV_32FC1);
+					cv::Mat final_variances_aux(0,1, CV_32FC1);
+					cv::Mat be_outlier_print_aux(0,1, CV_32FC1);
+					cv::Mat initial_inv_depth_sd(0,1, CV_32FC1);
+					cv::Mat deviation_inv_depth_aux(0,1, CV_32FC1);
+					cv::Mat image_points_byFocal_sd(0,3, CV_32FC1);
+					cv::Mat point_i_sd(1,3, CV_32FC1);
+					cv::Mat point_ref_im_sd(1,3, CV_32FC1);
 
-                    int counter_borrar = 0;
+					int counter_borrar = 0;
 
-                    int cont_depths=0;
-
-                    for (int regularization_times = 0; regularization_times<1;regularization_times++)
-                    {
-
-                        for (int i = corner; i < images.Im[reference_image]->image.rows-corner; i++)
-                        {
-                            for (int j = corner; j < images.Im[reference_image]->image.cols-corner; j++)
-                            {
-
-                                if (semidense_mapper->B.at<float>(i,j) > 100 && (semidense_mapper->BB.at<float>(i,j) < 100 ||semidense_mapper->num_keyframes <  semidense_mapper -> init_keyframes +1 ))
-                                {
-                                    point_ref_im_sd.at<float>(0,0) = i;
-                                    point_ref_im_sd.at<float>(0,1) = j;
-                                    point_ref_im_sd.at<float>(0,2) = 1;
-                                    points_ref_im_sd.push_back( point_ref_im_sd);
-
-                                    point_i_sd.at<float>(0,0) = (images.Im[reference_image]->cx-j)/images.Im[reference_image]->fx;
-                                    point_i_sd.at<float>(0,1) = (i-images.Im[reference_image]->cy)/images.Im[reference_image]->fy;
-                                    point_i_sd.at<float>(0,2) = 1;
-                                    image_points_byFocal_sd.push_back(point_i_sd);
-
-                                    be_outlier_print_aux.push_back(be_outlier_print.at<float>(cont_depths,0));
-                                    be_outlier_aux.push_back(be_outlier.at<float>(cont_depths,0));
-                                    deviation_inv_depth_aux.push_back(deviation_inv_depth.at<float>(cont_depths,0));
-
-                                    initial_inv_depth_sd.push_back(semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0));
-                                    final_variances_aux.push_back(final_variances.at<float>(cont_depths,0));
-
-                                    depths2regularize.at<float>(i,j)= semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0);
-                                    cont_depths++;
-
-                                    if ( semidense_mapper -> num_keyframes > semidense_mapper -> init_keyframes && (depth_map_points_tracked.at<float>(i,j)) < 0 )
-                                    {
-                                       depths2regularize.at<float>(i,j)=  1/depth_map_points_tracked.at<float>(i,j);
-                                       initial_inv_depth_sd.push_back( 1/depth_map_points_tracked.at<float>(i,j));
-                                    }
-                                }
-
-                                 if ( semidense_mapper->BB.at<float>(i,j) > 100 && semidense_mapper->B.at<float>(i,j) > 100 &&semidense_mapper->num_keyframes >  semidense_mapper -> init_keyframes )
-                                {
-                                    counter_borrar++;
-
-                                     point_ref_im_sd.at<float>(0,0) = i;
-                                     point_ref_im_sd.at<float>(0,1) = j;
-                                     point_ref_im_sd.at<float>(0,2) = 1;
-                                     points_ref_im_sd.push_back( point_ref_im_sd);
-
-                                     point_i_sd.at<float>(0,0) = (images.Im[reference_image]->cx-j)/images.Im[reference_image]->fx;
-                                     point_i_sd.at<float>(0,1) = (i-images.Im[reference_image]->cy)/images.Im[reference_image]->fy;
-                                     point_i_sd.at<float>(0,2) = 1;
-                                     image_points_byFocal_sd.push_back(point_i_sd);
-
-                                     float bb = 0;
-                                     float cc = 1;
-
-                                     final_variances_aux.push_back(variance_points_tracked.at<float>(i,j));
-
-                                     be_outlier_print_aux.push_back(bb);
-                                     be_outlier_aux.push_back(bb);
-                                     deviation_inv_depth_aux.push_back(cc);
-
-                                     depths2regularize.at<float>(i,j)=  1/depth_map_points_tracked.at<float>(i,j);
-                                     initial_inv_depth_sd.push_back( depths2regularize.at<float>(i,j));
-                                }
-
-                                if ( semidense_mapper -> num_keyframes >  semidense_mapper -> init_keyframes && (depth_map_points_tracked.at<float>(i,j)) < 0 )
-                                {
-                                   depths2regularize.at<float>(i,j)=  1/depth_map_points_tracked.at<float>(i,j);
-                                }
-
-                            }
-                        }
+					int cont_depths=0;
 
 
-                        be_outlier_print = be_outlier_print_aux.clone();
-                        be_outlier = be_outlier_aux.clone();
-                        semidense_mapper-> initial_inv_depth_sd = initial_inv_depth_sd.clone();
-                        deviation_inv_depth = deviation_inv_depth_aux.clone();
-                        semidense_mapper->points_ref_im_sd = points_ref_im_sd.clone();
-                        semidense_mapper->image_points_byFocal_sd = image_points_byFocal_sd.clone();
-                        final_variances = final_variances_aux.clone();
+					for (int i = corner; i < images.Im[reference_image]->image.rows-corner; i++)
+					{
+						for (int j = corner; j < images.Im[reference_image]->image.cols-corner; j++)
+						{
+							if (semidense_mapper->B.at<float>(i,j) > 100)
+							{
+								point_ref_im_sd.at<float>(0,0) = i;
+								point_ref_im_sd.at<float>(0,1) = j;
+								point_ref_im_sd.at<float>(0,2) = 1;
+								points_ref_im_sd.push_back( point_ref_im_sd);
 
-                        cont_depths = 0;
+								point_i_sd.at<float>(0,0) = (images.Im[reference_image]->cx-j)/images.Im[reference_image]->fx;
+								point_i_sd.at<float>(0,1) = (i-images.Im[reference_image]->cy)/images.Im[reference_image]->fy;
+								point_i_sd.at<float>(0,2) = 1;
+								image_points_byFocal_sd.push_back(point_i_sd);
 
+								if (semidense_mapper->BB.at<float>(i,j) < 100
+									||semidense_mapper->num_keyframes <  semidense_mapper -> init_keyframes +1 )
+								{
+									be_outlier_print_aux.push_back(be_outlier_print.at<float>(cont_depths,0));
+									be_outlier_aux.push_back(be_outlier.at<float>(cont_depths,0));
+									deviation_inv_depth_aux.push_back(deviation_inv_depth.at<float>(cont_depths,0));
 
-                        for (cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
-                        {
+									final_variances_aux.push_back(final_variances.at<float>(cont_depths,0));
 
-                                    int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
-                                    int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
+									depths2regularize.at<float>(i,j)= semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0);
+									initial_inv_depth_sd.push_back( depths2regularize.at<float>(i,j) );
 
-                                    float max_depth = -INFINITY;
-                                    float min_depth = +INFINITY;
-                                    float mean_depths = 0;
-                                    float cont_depths2reg = 0;
+									cont_depths++;
 
-                                        for (int ii = i-regularization_size; ii < i+regularization_size+1; ii++)
-                                        {
-                                            for (int jj = j-regularization_size; jj < j+regularization_size+1; jj++)
-                                            {
-                                                if ( fabs(depths2regularize.at<float>(ii,jj)) > 0)
-                                                {
-                                                    if ( fabs(gray_image.at<float>(i,j)-gray_image.at<float>(ii,jj)) < 25)
-                                                    {
-                                                        if (depths2regularize.at<float>(ii,jj) < min_depth)
-                                                        {
-                                                            min_depth =  depths2regularize.at<float>(ii,jj);
-                                                        }
-                                                        if (depths2regularize.at<float>(ii,jj) > max_depth)
-                                                        {
-                                                            max_depth =  depths2regularize.at<float>(ii,jj);
-                                                        }
-
-                                                        mean_depths+=depths2regularize.at<float>(ii,jj);
-                                                        cont_depths2reg ++;
-                                                    }
-                                                }
-                                            }
-                                        }
+								}
+								else
+								{
+									float bb = 0;
+									float cc = 1;
 
 
-                                        if (cont_depths2reg > 0 )
-                                        {
+									be_outlier_print_aux.push_back(bb);
+									be_outlier_aux.push_back(bb);
+									deviation_inv_depth_aux.push_back(cc);
 
-                                            if ((    ( max_depth/min_depth) < neighboors_consistency_print  ) && regularization_times < 1  )
-                                            {
-                                                be_outlier_print.at<float>(cont_depths,0) = 1;
-                                            }
+									final_variances_aux.push_back(variance_points_tracked.at<float>(i,j));
 
-
-                                            if (fabs( min_depth-max_depth) /
-                                                fabs(final_variances.at<float>(cont_depths,0)) >  spatial_threshold  && regularization_times < 1  )
-                                            {
-                                                be_outlier.at<float>(cont_depths,0) = 1;
-                                                be_outlier_print.at<float>(cont_depths,0) = 1;
-                                            }
-
-                                            {
-                                                semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0) = mean_depths / cont_depths2reg ;
-                                            }
+									depths2regularize.at<float>(i,j)=  1/depth_map_points_tracked.at<float>(i,j);
+									initial_inv_depth_sd.push_back( depths2regularize.at<float>(i,j));
 
 
-                                        } // cont_depths2reg > 2
-                                        else
-                                        {
-                                            be_outlier.at<float>(cont_depths,0) = 1;
-                                            be_outlier_print.at<float>(cont_depths,0) = 1;
-                                        }
+								}
+							}
+						}
+					}
 
-                    }
-                    }
+
+
+					be_outlier_print = be_outlier_print_aux.clone();
+					be_outlier = be_outlier_aux.clone();
+					semidense_mapper-> initial_inv_depth_sd = initial_inv_depth_sd.clone();
+					deviation_inv_depth = deviation_inv_depth_aux.clone();
+
+					semidense_mapper->points_ref_im_sd = points_ref_im_sd.clone();
+
+
+					semidense_mapper->image_points_byFocal_sd = image_points_byFocal_sd.clone();
+					final_variances = final_variances_aux.clone();
+
+
+
+					// Outlier Rejection based on Temporal Consistency
+					//
+
+					for (int cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
+					{
+						// Select the neighbor pixels with non-zero depth & similar pixel intensity
+						// Then compute "min_depth", "max_depth", "mean_depths" within the neighborhood
+
+						int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
+						int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
+
+
+						float max_depth = -INFINITY;
+						float min_depth = +INFINITY;
+						float mean_depths = 0;
+						float cont_depths2reg = 0;
+
+						for (int ii = i-regularization_size; ii < i+regularization_size+1; ii++)
+						{
+							for (int jj = j-regularization_size; jj < j+regularization_size+1; jj++)
+							{
+								if (   fabs(depths2regularize.at<float>(ii,jj)) > 0
+									&& fabs(gray_image.at<float>(i,j)-gray_image.at<float>(ii,jj)) < 25)
+								{
+
+									if (depths2regularize.at<float>(ii,jj) < min_depth)
+									{
+										min_depth =  depths2regularize.at<float>(ii,jj);
+									}
+									if (depths2regularize.at<float>(ii,jj) > max_depth)
+									{
+										max_depth =  depths2regularize.at<float>(ii,jj);
+									}
+
+									mean_depths+=depths2regularize.at<float>(ii,jj);
+									cont_depths2reg ++;
+
+								}
+							}
+						}
+
+						if (cont_depths2reg > 0 )
+						{
+							semidense_mapper-> initial_inv_depth_sd.at<float>(cont_depths,0) = mean_depths / cont_depths2reg ;
+						}
+
+
+						// Within the selected neighborhood, reject outliers based on temporal consistency
+
+						if (be_outlier.at<float>(cont_depths,0) == 0 || be_outlier_print.at<float>(cont_depths,0) == 0)
+						{
+							if (cont_depths2reg > 0 )
+							{
+
+								if (fabs( min_depth-max_depth) /
+									fabs(final_variances.at<float>(cont_depths,0)) >  spatial_threshold )
+								{
+									be_outlier.at<float>(cont_depths,0) = 1;
+									be_outlier_print.at<float>(cont_depths,0) = 1;
+								}
+
+								if (  ( max_depth/min_depth) < neighboors_consistency_print )
+								{
+									be_outlier_print.at<float>(cont_depths,0) = 1;
+								}
+
+							} // cont_depths2reg > 2
+							else
+							{
+								be_outlier.at<float>(cont_depths,0) = 1;
+								be_outlier_print.at<float>(cont_depths,0) = 1;
+							}
+						}
+
+					}
 
 
                     ////////////////////////// Median REGULARIZATION////////////////////////////////
