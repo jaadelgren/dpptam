@@ -604,7 +604,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
 					for (cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
 					{
-						if (be_outlier_print.at<float>(cont_depths,0) == 0)
+						if (be_outlier.at<float>(cont_depths,0) == 0)
 						{
 							int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
 							int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
