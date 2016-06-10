@@ -714,13 +714,9 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 
 
 
-					// Outlier Rejection based on Temporal Consistency
-					//
 
 					for (int cont_depths = 0; cont_depths <semidense_mapper-> initial_inv_depth_sd.rows;cont_depths++ )
 					{
-						// Select the neighbor pixels with non-zero depth & similar pixel intensity
-						// Then compute "min_depth", "max_depth", "mean_depths" within the neighborhood
 
 						int i = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,0));
 						int j = round(semidense_mapper->points_ref_im_sd.at<float>(cont_depths,1));
@@ -761,12 +757,10 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
 						}
 
 
-						// For those points with at least one supporting pixel neighbor,
-						// reject outliers based on temporal consistency
 
 						if (be_outlier.at<float>(cont_depths,0) == 0 || be_outlier_print.at<float>(cont_depths,0) == 0)
 						{
-							if (cont_depths2reg > 0 )
+							if (cont_depths2reg > 1 )
 							{
 
 								if (fabs( min_depth-max_depth) /
