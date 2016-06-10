@@ -310,27 +310,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                         float limit_grad_aux = G_reshaped.at<float>(25000,0);
                          if (limit_grad_aux < limit_grad){limit_grad = limit_grad_aux;}
 
-                        cv::Mat G_expanded = G+1;
-
-                        for (int i=corner; i<G.rows-corner ; i++)
-						{
-							for (int j=corner; j < G.cols-corner;j++)
-							{
-								if (G.at<float>(i,j) < limit_grad)
-								{
-									for (int ii = i-1; ii <= i+1; ii++)
-									{
-										for (int jj = j-1; jj <= j+1; jj++)
-										{
-											G_expanded.at<float>(ii,jj)  =  limit_grad-0.1;
-											// All numbers between [1, 2]    // Some number between [0.7, 0.9]
-										}
-									}
-								}
-							}
-						}
-
-                        semidense_mapper->G_expanded = G_expanded.clone();
 
                         semidense_mapper->B = G < limit_grad;
                         semidense_mapper->BB = semidense_mapper->B.clone();
@@ -513,7 +492,6 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
                     convergence_test(semidense_mapper,be_outlier,be_outlier_print,deviation_inv_depth,final_variances,inv_depth_disparity_th,inv_depth_disparity_print_th);
 
 
-                    cv::Mat G_expanded = semidense_mapper->G_expanded.clone();
                     ///////////////////// Median REGULARIZATION////////////////////////////////////////
                 	cv::Mat depths2regularize =  cv::Mat::zeros(images.Im[reference_image]->image.rows,images.Im[reference_image]->image.cols,CV_32FC1);
 
@@ -854,7 +832,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
             						{
             							for (int n_y_ref_aux = n_y_ref-1; n_y_ref_aux <= n_y_ref+1; n_y_ref_aux++)
             							{
-            								if (inliers_matrix.at<float>(n_y_ref_aux,n_x_ref_aux) > 0.5 || G_expanded.at<float>(n_y_ref_aux,n_x_ref_aux) > 5)
+            								if (inliers_matrix.at<float>(n_y_ref_aux,n_x_ref_aux) > 0.5 )
             								{
             									count_inlier_neighbours++;
             								}
@@ -867,7 +845,7 @@ void semidense_mapping(DenseMapping *dense_mapper,SemiDenseMapping *semidense_ma
             							 be_outlier.at<float>(i,0)<0.5 && count_inlier_neighbours > 3  ))
             					{
 
-            						semidense_mapper -> G_expanded.at<float>(round(n_y_ref),round(n_x_ref)) = 10;
+            						inliers_matrix.at<float>(round(n_y_ref),round(n_x_ref)) = 1;
 
             						//// Get XYZ position & graycolor data & inv_depth_variance of points_aux
             						//
