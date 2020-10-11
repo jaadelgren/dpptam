@@ -282,10 +282,11 @@ void fullydense_mapping(DenseMapping *pdense_mapper,ros::Publisher *pub_cloud)
          ///
          ///
          cv::Mat pixel_taken = cv::Mat::zeros(imsize_y,imsize_x,CV_32FC1) ;
-         for (int i = 0; i< sizeof(superpixels_index)/sizeof(superpixels_index[0]);i++)
+         const n_spx_indeces = sizeof(superpixels_index)/sizeof(superpixels_index[0]; 
+         for (int i = 0; i < n_spx_indeces);i++)
          {
              number_row = superpixels_index[i];
-             active_matching(images,images.supIm,number_row,superpixels_index);
+             active_matching(images,images.supIm,number_row,superpixels_index,n_spx_indeces);
              for (int j = 0; j<= images.supIm[number_row]->getNumberOfSuperpixels()-1  ;j++)
              {
                  cv::Mat matchings= images.supIm[number_row]->getSuperpixeles()[j]->getMatchings();
